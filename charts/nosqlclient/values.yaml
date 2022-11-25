@@ -1,0 +1,8 @@
+nosqlclientImageName: "mongoclient/mongoclient"
+nosqlclientVersion: "4.0.1"
+
+installMongo: "false"
+domainName: "localhost"
+
+nosqlclientMongoUsername: "nosqlclient"
+nosqlclientMongoPassword: "nosqlclient"

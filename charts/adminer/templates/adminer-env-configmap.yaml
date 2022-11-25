@@ -1,0 +1,12 @@
+apiVersion: v1
+data:
+  {{- if .Values.global.useExternalMariaDb }}
+  ADMINER_DEFAULT_SERVER: "{{ .Values.global.mariaDbHost }}"
+  {{- else }}
+  ADMINER_DEFAULT_SERVER: "mariadb.{{ .Release.Namespace }}"
+  {{- end }}
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: adminer-{{ .Release.Name }}-env
+  name: adminer-{{ .Release.Name }}-env

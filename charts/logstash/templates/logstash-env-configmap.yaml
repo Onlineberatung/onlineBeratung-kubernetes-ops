@@ -1,0 +1,10 @@
+{{- if not .Values.global.elkDisabled }}
+apiVersion: v1
+data:
+    ELASTICSEARCH_HOST: {{ .Values.global.elasticsearchHosts }}
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: logstash-env
+  name: logstash-env
+{{- end }}

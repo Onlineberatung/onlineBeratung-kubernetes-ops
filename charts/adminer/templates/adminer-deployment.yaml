@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.network/database_network: "true"
+    io.kompose.network/frontend_network: "true"
+    io.kompose.service: adminer
+  name: adminer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: adminer
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/database_network: "true"
+        io.kompose.network/frontend_network: "true"
+        io.kompose.service: adminer
+    spec:
+      containers:
+        - env:
+            - name: ADMINER_DEFAULT_SERVER
+              valueFrom:
+                configMapKeyRef:
+                  key: ADMINER_DEFAULT_SERVER
+                  name: adminer-{{ .Release.Name }}-env
+          image: {{ .Values.adminerImageName }}:{{ .Values.adminerVersion }}
+          name: adminer
+          ports:
+            - containerPort: 8080
+          resources: {}
+      restartPolicy: Always

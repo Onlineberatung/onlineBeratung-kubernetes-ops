@@ -1,0 +1,10 @@
+apiVersion: v1
+data:
+  MONGO_URL: "mongodb://{{ .Values.global.nosqlclientMongoUsername }}:{{ .Values.global.nosqlclientMongoPassword }}@mongodb.{{ .Release.Namespace }}:27017/nosqlclient"
+  ROOT_URL: "http://{{ .Values.domainName }}:3001"
+  INSTALL_MONGO: "{{ .Values.installMongo }}"
+kind: ConfigMap
+metadata:
+  labels:
+    io.kompose.service: nosqlclient-{{ .Release.Name }}-env
+  name: nosqlclient-{{ .Release.Name }}-env

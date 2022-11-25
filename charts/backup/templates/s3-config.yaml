@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-s3-config-{{ .Release.Name }}-configmap
+  namespace: backup
+data:
+  {{- (.Files.Glob "resources/.s3cfg").AsConfig | nindent 2 }}

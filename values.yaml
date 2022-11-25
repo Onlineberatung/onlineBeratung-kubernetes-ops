@@ -1,0 +1,68 @@
+global:
+  domainName: "app.onlineberatung.local"
+  multitenancyEnabled: false
+  elkDisabled: false
+  multitenancyWithSingleDomainEnabled: "false"
+  useExternalMariaDb: false
+  elasticsearchHosts: "http://elasticsearch-master.default:9200"
+
+online-counseling-logstash:
+  # reading the value from ELASTICSEARCH_HOST configmap env variable causes logstash to crash, therefore hardcoded host configs here
+  logstashPipeline:
+    logstash.conf: |
+
+      input {
+       http { 
+            port => 8080 # default: 8080, not 9600 
+            codec => "json" 
+          }
+      }
+      
+      filter {
+         if [serviceName] != "frontend" {
+            drop{}
+         }
+         if ![request][correlationId] or ![request][timestamp] {
+           drop{}
+         }
+      }
+      output {
+        elasticsearch
+        {                 
+          hosts => ["http://elasticsearch-master.default:9200"]
+          user => '${ELASTICSEARCH_USERNAME}'
+          password => '${ELASTICSEARCH_PASSWORD}'
+          ecs_compatibility => disabled 
+          index => "http-log-%{+YYYY.MM.dd}" 
+          document_type => "json"
+        }
+      }
+
+# Kibana
+online-counseling-kibana:
+  kibanaConfig:
+    kibana.yml: |
+      elasticsearch:
+        hosts:
+         - "http://elasticsearch.default:9200"
+        serviceAccountToken: "AAEAAWVsYXN0aWMva2liYW5hL2tpYmFuYXRva2VuOnFSZTdJblZaU3JDMVNwTmxFQm40Wnc"
+      xpack:
+        encryptedSavedObjects:
+          encryptionKey: 866cb03e9b2d5c4f23bfb8ae72113d13
+        reporting:
+          encryptionKey: 7fb9e63caffbd78d59bccf0aecca4312
+        security:
+          encryptionKey: e88b4a2a392bde1ee1f59af9f43b5440
+  kibanaEncryptionKey: "9wonFxmvmSeGr0kgrvQKRGjS6LVZhVO_Awkfe0IGaY3NDpaPaj"
+
+online-counseling-backup:
+  enableBackup: false
+  mysqlRootPassword: ""
+  backupDatabaseUser: ""
+  backupBucketAccessKey: ""
+  backupBucketSecretKey: ""
+  backupMongoDBAdmin: ""
+  backupMongoDBAdminPass: ""
+  backupGsCloudUserUUID: ""
+  backupGsCloudApiToken: ""
+  backupGsCloudClusterId: ""

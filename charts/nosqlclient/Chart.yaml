@@ -1,0 +1,6 @@
+name: online-counseling-nosqlclient
+description: The chart providing nosqlclient
+version: 0.0.1
+apiVersion: v1
+keywords:
+ - online-counseling-nosqlclient

@@ -1,0 +1,129 @@
+{{- if .Values.enableBackup }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-cronjob
+  namespace: backup
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            name: backup-cronjob
+        spec:
+          containers:
+            - name: backup-backup
+              image: "alpine:3.16.2"
+              imagePullPolicy: IfNotPresent
+              volumeMounts:
+                - name: backup-config-volume
+                  mountPath: scripts
+                - name: s3-config-volume
+                  mountPath: s3config
+              command: ["/bin/sh","-c"]
+              args: ["apk add --update --no-cache bash; /bin/bash /scripts/backup.sh"]
+              env:
+                - name: MYSQL_PWD
+                  valueFrom:
+                    secretKeyRef:
+                      key: MYSQL_PWD
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: DATABASES
+                  valueFrom:
+                    secretKeyRef:
+                      key: DATABASES
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: DATABASE_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      key: DATABASE_HOST
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: DATABASE_USER
+                  valueFrom:
+                    secretKeyRef:
+                      key: DATABASE_USER
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: BUCKET_NAME
+                  valueFrom:
+                    secretKeyRef:
+                      key: BUCKET_NAME
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: BUCKET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: BUCKET_ACCESS_KEY
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: BUCKET_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: BUCKET_SECRET_KEY
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: MONGODB_ADMIN
+                  valueFrom:
+                    secretKeyRef:
+                      key: MONGODB_ADMIN
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: MONGODB_ADMIN_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      key: MONGODB_ADMIN_PASS
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: MONGODB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      key: MONGODB_HOST
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: GSCLOUD_USERID
+                  valueFrom:
+                    secretKeyRef:
+                      key: GSCLOUD_USERID
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: GSCLOUD_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      key: GSCLOUD_TOKEN
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: GSCLOUD_CLUSTER_ID
+                  valueFrom:
+                    secretKeyRef:
+                      key: GSCLOUD_CLUSTER_ID
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: NAMESPACE
+                  valueFrom:
+                    secretKeyRef:
+                      key: NAMESPACE
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: POSTGRESQL_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      key: POSTGRESQL_HOST
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: POSTGRESQL_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: POSTGRESQL_PASSWORD
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: BACKUP_ENCRYPTION_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUP_ENCRYPTION_KEY
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: BACKUPS_TO_KEEP
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUPS_TO_KEEP
+                      name: backup-secret-{{ .Release.Name }}-env
+          volumes:
+            - name: backup-config-volume
+              configMap:
+                name: backup-script-{{ .Release.Name }}-configmap
+            - name: s3-config-volume
+              configMap:
+                name: backup-s3-config-{{ .Release.Name }}-configmap
+          imagePullSecrets:
+            - name: registry-secret
+          restartPolicy: Never
+{{- end }}

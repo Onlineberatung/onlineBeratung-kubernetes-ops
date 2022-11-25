@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    io.kompose.network/frontend_network: "true"
+    io.kompose.network/rocket_database_network: "true"
+    io.kompose.service: nosqlclient
+  name: nosqlclient
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: nosqlclient
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/frontend_network: "true"
+        io.kompose.network/rocket_database_network: "true"
+        io.kompose.service: nosqlclient
+    spec:
+      containers:
+        - env:
+            - name: INSTALL_MONGO
+              valueFrom:
+                configMapKeyRef:
+                  key: INSTALL_MONGO
+                  name: nosqlclient-{{ .Release.Name }}-env
+            - name: MONGO_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: MONGO_URL
+                  name: nosqlclient-{{ .Release.Name }}-env
+            - name: ROOT_URL
+              valueFrom:
+                configMapKeyRef:
+                  key: ROOT_URL
+                  name: nosqlclient-{{ .Release.Name }}-env
+          image: {{ .Values.nosqlclientImageName }}:{{ .Values.nosqlclientVersion }}
+          name: nosqlclient
+          resources: {}
+      restartPolicy: Always

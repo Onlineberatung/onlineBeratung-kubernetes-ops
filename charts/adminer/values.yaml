@@ -1,0 +1,5 @@
+adminerImageName: "adminer"
+adminerVersion: "4.8.1"
+
+global:
+  exposeAdminer: false
