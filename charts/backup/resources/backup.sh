@@ -78,9 +78,9 @@ echo "Finished MongoDB backup"
 echo "Starting OpenLdap backup"
 openldap_pod=$(kubectl get pods --selector io.kompose.service=openldap -n $NAMESPACE | grep openldap)
 openldap_pod=$(echo $openldap_pod | head -n1 | cut -d " " -f1)
-kubectl exec -i $openldap_pod -n $NAMESPACE -- /bin/bash -c "slapcat -l /var/lib/ldap/backup.ldif"
+kubectl exec -i $openldap_pod -n $NAMESPACE -- /bin/bash -c "slapcat -l /tmp/backup.ldif -F /opt/bitnami/openldap/etc/slapd.d"
 FILE_NAME=$(date +"%FT%H%M%S"_ldap_backup.ldif)
-kubectl cp $NAMESPACE/$openldap_pod:var/lib/ldap/backup.ldif $FILE_NAME
+kubectl cp $NAMESPACE/$openldap_pod:tmp/backup.ldif $FILE_NAME
 echo $BACKUP_ENCRYPTION_KEY | gpg --batch -c --passphrase-fd 0 $FILE_NAME && rm $FILE_NAME
 s3cmd put $FILE_NAME.gpg $BUCKET_NAME
 echo "Finished OpenLdap backup"
