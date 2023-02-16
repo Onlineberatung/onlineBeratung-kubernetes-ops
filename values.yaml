@@ -19,7 +19,7 @@ online-counseling-logstash:
       }
       
       filter {
-         if [serviceName] != "frontend" {
+         if [serviceName] != "frontend" and [serviceName] != "users" {
             drop{}
          }
          if ![request][correlationId] or ![request][timestamp] {
@@ -35,6 +35,53 @@ online-counseling-logstash:
           ecs_compatibility => disabled 
           index => "http-log-%{+YYYY.MM.dd}" 
           document_type => "json"
+        }
+      }
+
+opensearch-cluster:
+  enabled: false
+
+opensearch-logstash:
+  fullnameOverride: "opensearch-logstash"
+  image: "opensearchproject/logstash-oss-with-opensearch-output-plugin"
+  persistence:
+    enabled: true
+  service:
+    ports:
+      - name: http
+        port: 8080
+        protocol: TCP
+        targetPort: 8080
+  logstashConfig:
+    logstash.yml: |
+      http.host: 0.0.0.0
+  logstashPipeline:
+    logstash.conf: |
+      input {
+       http { 
+            port => 8080 # default: 8080, not 9600 
+            codec => "json" 
+          }
+      }
+      filter {
+         if [serviceName] != "frontend" and [serviceName] != "users" {
+            drop{}
+         }
+         if ![request][correlationId] or ![request][timestamp] {
+           drop{}
+         }
+      }
+      output {
+        opensearch
+        {
+          hosts => ["https://opensearch.develop:9200"]
+          user => '${ELASTICSEARCH_USERNAME}'
+          password => '${ELASTICSEARCH_PASSWORD}'
+          ecs_compatibility => disabled 
+          index => "http-log-%{+YYYY.MM.dd}" 
+          document_type => "json"
+          ssl_certificate_verification => false
+          ssl => true
         }
       }
 

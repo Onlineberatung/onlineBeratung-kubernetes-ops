@@ -1,0 +1,68 @@
+{{- if .Values.enabled -}}
+apiVersion: opensearch.opster.io/v1
+kind: OpenSearchCluster
+metadata:
+  name: {{ .Values.serviceName }}-cluster
+  namespace: develop
+spec:
+  general:
+    version: 1.3.0
+    httpPort: {{ .Values.httpPort }}
+    vendor: opensearch
+    serviceName: {{ .Values.serviceName }}
+    pluginsList: ["repository-s3"," https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/releases/download/1.3.0.0/prometheus-exporter-1.3.0.0.zip"]
+  dashboards:
+    version: {{ .Values.dashboard.version }}
+    enable: {{ .Values.dashboard.enabled }}
+    replicas: {{ .Values.dashboard.replicas }}
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+  confMgmt:
+    smartScaler: true
+  nodePools:
+    - component: masters
+      replicas: {{ .Values.masters.replicas }}
+      diskSize: "30Gi"
+      NodeSelector:
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "2Gi"
+          cpu: "500m"
+      roles:
+        - "master"
+        - "data"
+    - component: nodes
+      replicas: {{ .Values.nodes.replicas }}
+      diskSize: "30Gi"
+      NodeSelector:
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "2Gi"
+          cpu: "500m"
+      roles:
+        - "data"
+    - component: coordinators
+      replicas: {{ .Values.coordinators.replicas }}
+      diskSize: "30Gi"
+      NodeSelector:
+      resources:
+        requests:
+          memory: "2Gi"
+          cpu: "500m"
+        limits:
+          memory: "2Gi"
+          cpu: "500m"
+      roles:
+        - "ingest"
+{{- end -}}
