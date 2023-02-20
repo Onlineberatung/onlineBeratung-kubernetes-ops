@@ -1,0 +1,13 @@
+enabled: false
+httpPort: 9200
+serviceName: opensearch
+dashboard:
+  enabled: true
+  version: 1.3.0
+  replicas: 1
+nodes:
+  replicas: 2
+masters:
+  replicas: 2
+coordinators:
+  replicas: 1
