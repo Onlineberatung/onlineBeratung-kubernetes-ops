@@ -3,7 +3,7 @@ apiVersion: opensearch.opster.io/v1
 kind: OpenSearchCluster
 metadata:
   name: {{ .Values.serviceName }}-cluster
-  namespace: develop
+  namespace: {{ .Values.namespace }}
 spec:
   general:
     version: 1.3.0
