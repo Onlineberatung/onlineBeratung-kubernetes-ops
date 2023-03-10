@@ -1,6 +1,7 @@
 enabled: false
 httpPort: 9200
 serviceName: opensearch
+namespace: default
 dashboard:
   enabled: true
   version: 1.3.0
