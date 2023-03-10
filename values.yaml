@@ -40,21 +40,34 @@ online-counseling-logstash:
 
 opensearch-cluster:
   enabled: false
+  namespace: default
 
 opensearch-logstash:
-  fullnameOverride: "opensearch-logstash"
-  image: "opensearchproject/logstash-oss-with-opensearch-output-plugin"
-  persistence:
-    enabled: true
   service:
     ports:
       - name: http
         port: 8080
         protocol: TCP
         targetPort: 8080
+  ingress:
+    enabled: false
+    annotations:
+      nginx.ingress.kubernetes.io/rewrite-target: /$1$2
+    className: "nginx"
+    pathtype: Prefix
+    hosts:
+      - host: "your.domain.com"
+        paths:
+          - path: /service/logstash
+            servicePort: 8080
+  fullnameOverride: "opensearch-logstash"
+  image: "opensearchproject/logstash-oss-with-opensearch-output-plugin"
+  persistence:
+    enabled: true
   logstashConfig:
     logstash.yml: |
       http.host: 0.0.0.0
+      pipeline.ecs_compatibility: disabled
   logstashPipeline:
     logstash.conf: |
       input {
@@ -74,10 +87,9 @@ opensearch-logstash:
       output {
         opensearch
         {
-          hosts => ["https://opensearch.develop:9200"]
+          hosts => ["https://opensearch.default:9200"]
           user => '${ELASTICSEARCH_USERNAME}'
           password => '${ELASTICSEARCH_PASSWORD}'
-          ecs_compatibility => disabled 
           index => "http-log-%{+YYYY.MM.dd}" 
           document_type => "json"
           ssl_certificate_verification => false
