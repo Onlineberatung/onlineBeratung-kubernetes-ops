@@ -9,4 +9,10 @@
 #### Install the Opensearch Operator
 `helm install opensearch-operator --create-namespace -n monitoring opensearch-operator/opensearch-operator -f values-develop.yaml`
 
+#### Basic Configuration
+```yaml
+opensearch-cluster:
+  namespace: "monitoring"
+  enabled: true
+```
 
