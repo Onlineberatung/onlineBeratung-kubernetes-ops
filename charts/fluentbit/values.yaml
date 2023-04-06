@@ -1,0 +1,22 @@
+service:
+  enable: false
+ingress:
+  enable: false
+input:
+  enable: false
+output:
+  opensearch: {}
+  httpopensearch:
+    logstashPrefix: "http"
+filter:
+  systemdcustom:
+    enable: false
+    include_record: false # Include the original record in the output for debugging
+    kubernetes:
+      labels: false
+      annotations: false
+parser:
+  systemdjson:
+    enable: false
+  systemdloglevel:
+    enable: false

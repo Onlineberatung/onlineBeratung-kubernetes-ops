@@ -1,15 +1,14 @@
-{{- if .Values.enabled -}}
 apiVersion: opensearch.opster.io/v1
 kind: OpenSearchCluster
 metadata:
-  name: {{ .Values.serviceName }}-cluster
-  namespace: {{ .Values.namespace }}
+  name: {{ .Values.serviceName | default "opensearch" }}-cluster
+  namespace: {{ .Values.namespace | default "default" }}
 spec:
   general:
     version: 1.3.0
     httpPort: {{ .Values.httpPort }}
     vendor: opensearch
-    serviceName: {{ .Values.serviceName }}
+    serviceName: {{ .Values.serviceName | default "opensearch" }}
     pluginsList: ["repository-s3"," https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/releases/download/1.3.0.0/prometheus-exporter-1.3.0.0.zip"]
   dashboards:
     version: {{ .Values.dashboard.version }}
@@ -24,6 +23,12 @@ spec:
         cpu: "500m"
   confMgmt:
     smartScaler: true
+  {{ if and .Values.username .Values.password }}
+  security:
+    config:
+      adminCredentialsSecret:
+        name: {{ .Values.serviceName | default "opensearch" }}-cluster-secret
+  {{ end }}
   nodePools:
     - component: masters
       replicas: {{ .Values.masters.replicas }}
@@ -65,4 +70,3 @@ spec:
           cpu: "500m"
       roles:
         - "ingest"
-{{- end -}}

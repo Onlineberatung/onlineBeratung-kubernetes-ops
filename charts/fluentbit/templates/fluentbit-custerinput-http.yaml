@@ -1,0 +1,18 @@
+{{- if .Values.input.http.enable -}}
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: http
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: logging
+spec:
+  customPlugin:
+    config: |
+      tag http.*
+      name http
+      listen {{ .Values.input.http.listen | default "0.0.0.0" }}
+      port {{ .Values.input.http.port | default 8888 }}
+      successful_response_code 200
+{{- end }}

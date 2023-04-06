@@ -1,7 +1,4 @@
-enabled: false
 httpPort: 9200
-serviceName: opensearch
-namespace: default
 dashboard:
   enabled: true
   version: 1.3.0
@@ -12,3 +9,6 @@ masters:
   replicas: 2
 coordinators:
   replicas: 1
+# Do not change the default user because it needs a security config too with bcrypted password which we don't have
+username: admin # Do not change this value
+password: admin # Do not change this value

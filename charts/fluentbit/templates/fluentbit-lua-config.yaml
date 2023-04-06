@@ -1,0 +1,178 @@
+{{- if and .Values.filter.systemdcustom.enable -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-systemd-lua
+  namespace: {{ .Values.namespace | default "default" }}
+data:
+  systemd.lua: |
+    function format(tag, timestamp, record)
+      -- Ignore logs without kubernetes metadata
+      if not record["kubernetes"] then
+        return -1, 0, 0
+      end
+      
+      -- Ignore fluent-bit logs
+      if record["kubernetes"]["container_name"] == "fluent-bit" then
+        return -1, 0, 0
+      end
+
+      -- Ignore unknown container logs
+      if not record["kubernetes"]["container_name"] then
+        return -1, 0, 0
+      end
+
+      -- Ignore logs without a log level
+      -- if not record["LOGLEVEL"] then
+      --   print("Not loglevel")
+      --   print(record["kubernetes"]["container_name"])
+      --   return -1, 0, 0
+      -- end
+    
+      {{ if .Values.filter.systemdcustom.excluded }}{{ if .Values.filter.systemdcustom.excluded.pods }}
+      local excludedPods = {
+        {{- range $_, $p := .Values.filter.systemdcustom.excluded.pods }}
+          ['{{ $p }}']=true,
+        {{- end }}
+      }
+    
+      if excludedPods[record["kubernetes"]["container_name"]] then
+        return -1, 0, 0
+      end
+      {{ end }}{{ end }}
+    
+      {{ if .Values.filter.systemdcustom.included }}{{ if .Values.filter.systemdcustom.included.pods }}
+      local includedPods = {
+        {{- range $_, $p := .Values.filter.systemdcustom.included.pods }}
+          ['{{ $p }}']=true,
+        {{- end }}
+      }
+    
+      if not includedPods[record["kubernetes"]["container_name"]] then
+        return -1, 0, 0
+      end
+      {{ end }}{{ end }}
+    
+      new_record = {}
+    
+      {{ if .Values.filter.systemdcustom.include_record }}
+      new_record["record"] = record
+      {{ end }}
+
+      timeStr = os.date("!*t", timestamp["sec"])
+      t = string.format("%4d-%02d-%02dT%02d:%02d:%02d.%sZ",
+      timeStr["year"], timeStr["month"], timeStr["day"],
+      timeStr["hour"], timeStr["min"], timeStr["sec"],
+      timestamp["nsec"])
+
+      kubernetes = {}
+      new_record["time"] = t
+      new_record["log"] = {}
+      new_record["log"]["org"] = record["MESSAGE"]
+      new_record["log"]["message"] = record["MESSAGE"]
+      if record["LOG_MESSAGE"] ~= "" then
+        new_record["log"]["message"] = record["LOG_MESSAGE"]
+      end
+      
+      -- Parse rocket.chat logs
+      if record["LOG_LEVEL"] then
+        new_record["log"]["level"] = record["LOG_LEVEL"]
+      elseif record["kubernetes"]["container_name"] == "rocketchat" or record["kubernetes"]["container_name"] == "mongodb" then
+        -- Read msg for json input (rocketchat, mongodb)
+        new_record["log"]["message"] = ""
+        if record["msg"] then
+            new_record["log"]["message"] = new_record["log"]["message"]..record["msg"]
+        end
+    
+        if record["kubernetes"]["container_name"] == "rocketchat" then
+          if record["method"] then
+              new_record["log"]["message"] = new_record["log"]["message"].." - "..record["method"]
+          end
+          if record["name"] then
+              new_record["log"]["message"] = new_record["log"]["message"].." - "..record["name"]
+          end
+          if record["url"] then
+              new_record["log"]["message"] = new_record["log"]["message"].." - "..record["url"]
+          end
+    
+          if record["level"] then
+            if record["level"] >= 60 then
+              new_record["log"]["level"] = "FATAL"
+            elseif record["level"] == 51 then
+              new_record["log"]["level"] = "INFO"
+            elseif record["level"] >= 50 then
+              new_record["log"]["level"] = "ERROR"
+            elseif record["level"] >= 40 then
+              new_record["log"]["level"] = "WARN"
+            elseif record["level"] >= 30 then
+              new_record["log"]["level"] = "INFO"
+            elseif record["level"] >= 20 then
+              new_record["log"]["level"] = "DEBUG"
+            elseif record["level"] >= 10 then
+              new_record["log"]["level"] = "TRACE"
+            end
+          end
+        elseif record["kubernetes"]["container_name"] == "mongodb" then
+          if record["s"] == "I" then
+            new_record["log"]["level"] = "INFO"
+          elseif record["s"] == "W" then
+            new_record["log"]["level"] = "WARN"
+          elseif record["s"] == "E" then
+            new_record["log"]["level"] = "ERROR"
+          elseif record["s"] == "F" then
+            new_record["log"]["level"] = "FATAL"
+          else
+            new_record["log"]["level"] = "DEBUG"
+          end
+        end
+      elseif record["kubernetes"]["container_name"] == "userservice" then
+        -- Read msg for json input (userservice)
+        if record["log"] then
+          if record["log"]["message"] then
+            new_record["log"]["message"] = new_record["log"]["message"]..record["log"]["message"]
+          end
+          if record["log"]["level"] then
+            new_record["log"]["level"] = record["log"]["level"]
+          end
+        end
+      end
+    
+      new_record["kubernetes"] = record["kubernetes"]
+      new_record["serviceName"] = record["kubernetes"]["container_name"]
+
+      return 1, timestamp, new_record
+    end
+{{- end }}
+
+### Userservice Example
+# {"CID":"a1c1728d-88d6-4155-8543-0bf10163f181","serviceName":"users","timestamp":"2023-04-06T08:42:01.651Z","request":{"correlationId":"a1c1728d-88d6-4155-8543-0bf10163f181","timestamp":"null"},"log":{"level":"INFO","levelValue":49435,"logger":"de.caritas.cob.userservice.api.Messenger","message":"Ignoring non-temp chat (4DuDLgoEGTQaiLHCh) of user (KumvKJoDgNTRyMkoh)","thread":"http-nio-8080-exec-4","stack":""}}
+
+### Rocket.chat Example
+# {"level":50,"time":"2023-03-29T22:45:56.341Z","pid":1,"hostname":"rocketchat-5845659777-mrgh9","name":"System","msg":"No real time data received recently"}
+
+### MongoDB Example
+# {"t":{"$date":"2023-04-05T01:18:51.641+00:00"},"s":"I",  "c":"ACCESS",   "id":20250,   "ctx":"conn263482","msg":"Authentication succeeded","attr":{"mechanism":"SCRAM-SHA-1","speculative":false,"principalName":"rocketchat","authenticationDatabase":"rocketchat","remote":"10.244.128.9:47852","extraInfo":{}}}
+
+### Example
+#  ",
+#  "_SYSTEMD_CGROUP"=>"/podruntime.slice/docker.service",
+#  "_SYSTEMD_UNIT"=>"docker.service",
+#  "_SYSTEMD_SLICE"=>"podruntime.slice",
+#  "_SYSTEMD_INVOCATION_ID"=>"14c5e53c9fa4409f9fe843cdbd928978",
+#  "_BOOT_ID"=>"3f1804e48a5043d2befcffa694521bc8",
+#  "_MACHINE_ID"=>"5d0b03b3eac649e4b59869956fa11fff",
+#  "_HOSTNAME"=>"node-pool0-0",
+#  "CONTAINER_ID_FULL"=>"e6e1d937d64db07ef7e4bd74237d8f9bc09e20862013cec86e8ffc8d87d78622",
+#  "CONTAINER_NAME"=>"k8s_prosody_prosody-57c577ccf9-8vrqx_jitsi_b00d95ce-45db-44f5-b173-fa99bb4c9d81_0",
+#  "CONTAINER_TAG"=>"e6e1d937d64d",
+#  "IMAGE_NAME"=>"jitsi/prosody@sha256:2e3b611ebeeb3a50ebe54ae59bca9fc7eeb4fb109c10f49fb0e2b8ce4ac843aa",
+#  "SYSLOG_IDENTIFIER"=>"e6e1d937d64d",
+#  "CONTAINER_ID"=>"e6e1d937d64d",
+#  "MESSAGE"=>"c2s560d1c6d5f10                                              debug	Sending[c2s]: <presence from='jvbbrewery@internal-muc.meet.jitsi/jvb-7786568c5f-nvtqc' xml:lang='en-US' to='jvb@auth.meet.jitsi/nE_-k8L1gmc8'>",
+#  "_SOURCE_REALTIME_TIMESTAMP"=>"1679660499683565",
+#  "kubernetes"=>{"pod_name"=>"prosody-57c577ccf9-8vrqx",
+#  "namespace_name"=>"jitsi",
+#  "container_name"=>"prosody",
+#  "docker_id"=>"e6e1d937d64db07ef7e4bd74237d8f9bc09e20862013cec86e8ffc8d87d78622",
+#  "container_image"=>"jitsi/prosody:stable-8252"
+#}}]

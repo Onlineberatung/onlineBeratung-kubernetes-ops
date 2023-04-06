@@ -1,0 +1,34 @@
+{{- if .Values.service.enable -}}
+kind: Service
+apiVersion: v1
+metadata:
+  name: fluentbit-http-service
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    app: fluentbit-http-service
+    chart: {{ .Chart.Name | quote }}
+    heritage: {{ .Release.Service | quote }}
+    release: {{ .Release.Name | quote }}
+  annotations:
+  {{ toYaml .Values.service.annotations | indent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- if .Values.service.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.service.loadBalancerIP }}
+  {{- end }}
+  {{- with .Values.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{ toYaml . | indent 4 }}
+  {{- end }}
+  {{- if .Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+  {{- end }}
+  selector:
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: fluent-bit
+  ports:
+    - name: http
+      port: {{ .Values.service.port | default 8888 }}
+      protocol: TCP
+      targetPort: {{ .Values.input.http.port | default 8888 }}
+{{- end }}

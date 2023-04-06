@@ -43,6 +43,10 @@ opensearch-cluster:
   namespace: default
 
 opensearch-logstash:
+  fullnameOverride: "opensearch-logstash"
+  image: "opensearchproject/logstash-oss-with-opensearch-output-plugin"
+  imageTag: "8.6.1"
+  httpPort: 8080
   service:
     ports:
       - name: http
@@ -50,18 +54,16 @@ opensearch-logstash:
         protocol: TCP
         targetPort: 8080
   ingress:
+    pathtype: Prefix
     enabled: false
     annotations:
       nginx.ingress.kubernetes.io/rewrite-target: /$1$2
     className: "nginx"
-    pathtype: Prefix
     hosts:
-      - host: "your.domain.com"
+      - host: "logstash.example.local"
         paths:
           - path: /service/logstash
             servicePort: 8080
-  fullnameOverride: "opensearch-logstash"
-  image: "opensearchproject/logstash-oss-with-opensearch-output-plugin"
   persistence:
     enabled: true
   logstashConfig:
@@ -87,7 +89,7 @@ opensearch-logstash:
       output {
         opensearch
         {
-          hosts => ["https://opensearch.default:9200"]
+          hosts => ["https://opensearch.monitoring:9200"]
           user => '${ELASTICSEARCH_USERNAME}'
           password => '${ELASTICSEARCH_PASSWORD}'
           index => "http-log-%{+YYYY.MM.dd}" 
