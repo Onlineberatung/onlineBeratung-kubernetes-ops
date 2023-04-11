@@ -14,6 +14,10 @@ spec:
     version: {{ .Values.dashboard.version }}
     enable: {{ .Values.dashboard.enabled }}
     replicas: {{ .Values.dashboard.replicas }}
+    {{ if and .Values.username .Values.password }}
+    opensearchCredentialsSecret:
+      name: {{ .Values.serviceName | default "opensearch" }}-cluster-secret
+    {{ end }}
     resources:
       requests:
         memory: "1Gi"
@@ -21,6 +25,8 @@ spec:
       limits:
         memory: "1Gi"
         cpu: "500m"
+    additionalConfig:
+      opensearch_security.multitenancy.enabled: "false"
   confMgmt:
     smartScaler: true
   {{ if and .Values.username .Values.password }}
@@ -28,6 +34,10 @@ spec:
     config:
       adminCredentialsSecret:
         name: {{ .Values.serviceName | default "opensearch" }}-cluster-secret
+      {{ if .Values.passwordHash }}
+      securityConfigSecret:
+        name: {{ .Values.serviceName | default "opensearch" }}-securityconfig-secret
+      {{ end }}
   {{ end }}
   nodePools:
     - component: masters

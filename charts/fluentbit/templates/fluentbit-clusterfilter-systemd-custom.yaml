@@ -58,11 +58,25 @@ spec:
           - kubernetes_*
         nestUnder: kubernetes
         removePrefix: kubernetes_
-    # Filter and reformat systemd messages
+    # Filter pod names
     - lua:
         script:
-          key: systemd.lua
+          key: filter_pods.lua
+          name: fluent-bit-systemd-lua
+        call: filter_pods
+        timeAsTable: true
+    # Reformat message
+    - lua:
+        script:
+          key: format.lua
           name: fluent-bit-systemd-lua
         call: format
+        timeAsTable: true
+    # Filter log levels
+    - lua:
+        script:
+          key: filter_loglevel.lua
+          name: fluent-bit-systemd-lua
+        call: filter_loglevel
         timeAsTable: true
 {{- end }}

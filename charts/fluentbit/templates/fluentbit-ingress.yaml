@@ -18,7 +18,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  {{- if and .Values.global.multitenancyWithSingleDomainEnabled .Values.global.multitenancyEnabled }}
+  {{- if and (not .Values.global.multitenancyWithSingleDomainEnabled) .Values.global.multitenancyEnabled }}
     - host: "*.{{ .Values.global.domainName }}"
   {{- else }}
     - host: {{ .Values.global.domainName }}

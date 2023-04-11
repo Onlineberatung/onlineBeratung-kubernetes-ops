@@ -9,6 +9,9 @@ masters:
   replicas: 2
 coordinators:
   replicas: 1
-# Do not change the default user because it needs a security config too with bcrypted password which we don't have
-username: admin # Do not change this value
-password: admin # Do not change this value
+# To override the password you can use the following attributes:
+username: admin
+password: admin
+# Generate a password hash using the following page:
+# https://bcrypt-generator.com/
+#passwordHash: $2a$12$lTsgwZkhRChLyaAvCw/TpORLe2E.DtfX7nVTV96HCgkbTEh5/Ai82

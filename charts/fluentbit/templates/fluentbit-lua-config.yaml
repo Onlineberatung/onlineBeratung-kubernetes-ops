@@ -5,8 +5,8 @@ metadata:
   name: fluent-bit-systemd-lua
   namespace: {{ .Values.namespace | default "default" }}
 data:
-  systemd.lua: |
-    function format(tag, timestamp, record)
+  filter_pods.lua: |
+    function filter_pods(tag, timestamp, record)
       -- Ignore logs without kubernetes metadata
       if not record["kubernetes"] then
         return -1, 0, 0
@@ -21,13 +21,6 @@ data:
       if not record["kubernetes"]["container_name"] then
         return -1, 0, 0
       end
-
-      -- Ignore logs without a log level
-      -- if not record["LOGLEVEL"] then
-      --   print("Not loglevel")
-      --   print(record["kubernetes"]["container_name"])
-      --   return -1, 0, 0
-      -- end
     
       {{ if .Values.filter.systemdcustom.excluded }}{{ if .Values.filter.systemdcustom.excluded.pods }}
       local excludedPods = {
@@ -53,6 +46,11 @@ data:
       end
       {{ end }}{{ end }}
     
+      return 1, timestamp, record
+    end
+
+  format.lua: |
+    function format(tag, timestamp, record)
       new_record = {}
     
       {{ if .Values.filter.systemdcustom.include_record }}
@@ -68,79 +66,135 @@ data:
       kubernetes = {}
       new_record["time"] = t
       new_record["log"] = {}
-      new_record["log"]["org"] = record["MESSAGE"]
-      new_record["log"]["message"] = record["MESSAGE"]
-      if record["LOG_MESSAGE"] ~= "" then
-        new_record["log"]["message"] = record["LOG_MESSAGE"]
-      end
-      
-      -- Parse rocket.chat logs
-      if record["LOG_LEVEL"] then
-        new_record["log"]["level"] = record["LOG_LEVEL"]
-      elseif record["kubernetes"]["container_name"] == "rocketchat" or record["kubernetes"]["container_name"] == "mongodb" then
-        -- Read msg for json input (rocketchat, mongodb)
-        new_record["log"]["message"] = ""
-        if record["msg"] then
-            new_record["log"]["message"] = new_record["log"]["message"]..record["msg"]
-        end
-    
-        if record["kubernetes"]["container_name"] == "rocketchat" then
-          if record["method"] then
-              new_record["log"]["message"] = new_record["log"]["message"].." - "..record["method"]
-          end
-          if record["name"] then
-              new_record["log"]["message"] = new_record["log"]["message"].." - "..record["name"]
-          end
-          if record["url"] then
-              new_record["log"]["message"] = new_record["log"]["message"].." - "..record["url"]
-          end
-    
-          if record["level"] then
-            if record["level"] >= 60 then
-              new_record["log"]["level"] = "FATAL"
-            elseif record["level"] == 51 then
-              new_record["log"]["level"] = "INFO"
-            elseif record["level"] >= 50 then
-              new_record["log"]["level"] = "ERROR"
-            elseif record["level"] >= 40 then
-              new_record["log"]["level"] = "WARN"
-            elseif record["level"] >= 30 then
-              new_record["log"]["level"] = "INFO"
-            elseif record["level"] >= 20 then
-              new_record["log"]["level"] = "DEBUG"
-            elseif record["level"] >= 10 then
-              new_record["log"]["level"] = "TRACE"
-            end
-          end
-        elseif record["kubernetes"]["container_name"] == "mongodb" then
-          if record["s"] == "I" then
-            new_record["log"]["level"] = "INFO"
-          elseif record["s"] == "W" then
-            new_record["log"]["level"] = "WARN"
-          elseif record["s"] == "E" then
-            new_record["log"]["level"] = "ERROR"
-          elseif record["s"] == "F" then
-            new_record["log"]["level"] = "FATAL"
-          else
-            new_record["log"]["level"] = "DEBUG"
-          end
-        end
-      elseif record["kubernetes"]["container_name"] == "userservice" then
-        -- Read msg for json input (userservice)
-        if record["log"] then
-          if record["log"]["message"] then
-            new_record["log"]["message"] = new_record["log"]["message"]..record["log"]["message"]
-          end
-          if record["log"]["level"] then
-            new_record["log"]["level"] = record["log"]["level"]
-          end
-        end
-      end
-    
       new_record["kubernetes"] = record["kubernetes"]
       new_record["serviceName"] = record["kubernetes"]["container_name"]
+      new_record["log"]["org"] = record["MESSAGE"]
+      new_record["log"]["message"] = record["MESSAGE"]
+    
+      new_record = parseSystemdMessage(record, new_record)
+      -- If systemd massage was parsed with level and message, use it
+      if new_record["log"]["level"] then
+        return 1, timestamp, new_record
+      end
+    
+      if record["kubernetes"]["container_name"] == "rocketchat" then
+        return 1, timestamp, parseRocketchatMessage(record, new_record)
+      elseif record["kubernetes"]["container_name"] == "mongodb" then
+        return 1, timestamp, parseMongoDBMessage(record, new_record)
+      elseif record["kubernetes"]["container_name"] == "userservice" then
+        return 1, timestamp, parseUserserviceMessage(record, new_record)
+      end
 
       return 1, timestamp, new_record
+    end
+    
+    function parseSystemdMessage(record, new_record)
+      if record["LOG_MESSAGE"] and record["LOG_MESSAGE"] ~= "" then
+        new_record["log"]["message"] = record["LOG_MESSAGE"]
+      end
+      if record["LOG_LEVEL"] and record["LOG_LEVEL"] ~= "" then
+        new_record["log"]["level"] = record["LOG_LEVEL"]
+      end
+    
+      return new_record
+    end
+    
+    function parseRocketchatMessage(record, new_record)
+      new_record["log"]["message"] = ""
+      if record["msg"] and record["msg"] ~= "" then
+        new_record["log"]["message"] = record["msg"]
+      end
+      if record["method"] then
+        new_record["log"]["message"] = new_record["log"]["message"].." - "..record["method"]
+      end
+      if record["name"] then
+        new_record["log"]["message"] = new_record["log"]["message"].." - "..record["name"]
+      end
+      if record["url"] then
+        new_record["log"]["message"] = new_record["log"]["message"].." - "..record["url"]
+      end
+
+      if record["level"] then
+        if record["level"] >= 60 then
+          new_record["log"]["level"] = "FATAL"
+        elseif record["level"] == 51 then
+          new_record["log"]["level"] = "INFO"
+        elseif record["level"] >= 50 then
+          new_record["log"]["level"] = "ERROR"
+        elseif record["level"] >= 40 then
+          new_record["log"]["level"] = "WARN"
+        elseif record["level"] >= 30 then
+          new_record["log"]["level"] = "INFO"
+        elseif record["level"] >= 20 then
+          new_record["log"]["level"] = "DEBUG"
+        elseif record["level"] >= 10 then
+          new_record["log"]["level"] = "TRACE"
+        end
+      end
+
+      return new_record
+    end
+    
+    function parseMongoDBMessage(record, new_record)
+      if record["msg"] then
+          new_record["log"]["message"] = record["msg"]
+      end
+      if record["s"] == "I" then
+        new_record["log"]["level"] = "INFO"
+      elseif record["s"] == "W" then
+        new_record["log"]["level"] = "WARN"
+      elseif record["s"] == "E" then
+        new_record["log"]["level"] = "ERROR"
+      elseif record["s"] == "F" then
+        new_record["log"]["level"] = "FATAL"
+      else
+        new_record["log"]["level"] = "DEBUG"
+      end
+    
+      return new_record
+    end
+    
+    function parseUserserviceMessage(record, new_record)
+      -- Read msg for json input (userservice)
+      if record["log"] then
+        if record["log"]["message"] then
+          new_record["log"]["message"] = record["log"]["message"]
+        end
+        if record["log"]["level"] then
+          new_record["log"]["level"] = record["log"]["level"]
+        end
+      end
+    
+      return new_record
+    end
+
+  filter_loglevel.lua: |
+    function filter_loglevel(tag, timestamp, record)
+      {{ if .Values.filter.systemdcustom.excluded }}{{ if .Values.filter.systemdcustom.excluded.loglevels }}
+      local excludedLogLevels = {
+        {{- range $_, $p := .Values.filter.systemdcustom.excluded.loglevels }}
+          ['{{ $p }}']=true,
+        {{- end }}
+      }
+    
+      if record["log"]["level"] and excludedLogLevels[record["log"]["level"]] then
+        return -1, 0, 0
+      end
+      {{ end }}{{ end }}
+    
+      {{ if .Values.filter.systemdcustom.included }}{{ if .Values.filter.systemdcustom.included.loglevels }}
+      local includedLogLevels = {
+        {{- range $_, $p := .Values.filter.systemdcustom.included.loglevels }}
+          ['{{ $p }}']=true,
+        {{- end }}
+      }
+    
+      if (not record["log"]["level"]) or (not includedLogLevels[record["log"]["level"]]) then
+        return -1, 0, 0
+      end
+      {{ end }}{{ end }}
+
+      return 1, timestamp, record
     end
 {{- end }}
 
