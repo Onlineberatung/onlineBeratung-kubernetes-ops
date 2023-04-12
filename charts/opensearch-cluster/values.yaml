@@ -1,7 +1,7 @@
 httpPort: 9200
 dashboard:
   enabled: true
-  version: 1.3.0
+  version: 2.5.0
   replicas: 1
 nodes:
   replicas: 2

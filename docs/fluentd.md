@@ -66,6 +66,7 @@ fluentbit:
       bufferSize: "1M"
       host: opensearch.monitoring
       port: 9200
+      suppressTypeName: true
       tls:
         verify: false
       httpUser:
