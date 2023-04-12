@@ -4,11 +4,11 @@ dashboard:
   version: 2.5.0
   replicas: 1
 nodes:
-  replicas: 2
+  replicas: 0
 masters:
-  replicas: 2
+  replicas: 3
 coordinators:
-  replicas: 1
+  replicas: 0
 # To override the password you can use the following attributes:
 username: admin
 password: admin
