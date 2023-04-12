@@ -3,7 +3,8 @@ service:
 ingress:
   enable: false
 input:
-  enable: false
+  http:
+    enable: false
 output:
   opensearch: {}
   httpopensearch:
