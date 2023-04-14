@@ -1,3 +1,4 @@
+{{- if .Values.enableBackup }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,3 +6,4 @@ metadata:
   namespace: backup
 data:
   {{- (.Files.Glob "resources/backup.sh").AsConfig | nindent 2 }}
+{{- end }}
