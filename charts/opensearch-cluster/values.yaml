@@ -1,14 +1,17 @@
-enabled: false
 httpPort: 9200
-serviceName: opensearch
-namespace: default
 dashboard:
   enabled: true
-  version: 1.3.0
+  version: 2.5.0
   replicas: 1
 nodes:
-  replicas: 2
+  replicas: 0
 masters:
-  replicas: 2
+  replicas: 3
 coordinators:
-  replicas: 1
+  replicas: 0
+# To override the password you can use the following attributes:
+username: admin
+password: admin
+# Generate a password hash using the following page:
+# https://bcrypt-generator.com/
+#passwordHash: $2a$12$lTsgwZkhRChLyaAvCw/TpORLe2E.DtfX7nVTV96HCgkbTEh5/Ai82

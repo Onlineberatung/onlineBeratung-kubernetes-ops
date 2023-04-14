@@ -1,0 +1,82 @@
+{{- if and .Values.filter.systemdcustom.enable -}}
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: systemd-custom
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: logging
+spec:
+  match: service.*
+  filters:
+    # Parse multiline messages
+    - multiline:
+        keyContent: MESSAGE
+        parser: docker, cri, java, multiline-regex-test
+    # Parse log level
+    {{ if and .Values.parser.systemdloglevel.enable -}}
+    - parser:
+        keyName: MESSAGE
+        parser: systemd-loglevel
+        reserveData: true
+        preserveKey: true
+    {{ end }}
+    # Parse log level
+    {{ if and .Values.parser.systemdjson.enable -}}
+    - parser:
+        keyName: MESSAGE
+        parser: systemd-json
+        reserveData: true
+        preserveKey: true
+    {{ end }}
+    # Get kubernetes metadata
+    - kubernetes:
+        kubeURL: https://kubernetes.default.svc:443
+        kubeCAFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+        labels: {{ .Values.filter.systemdcustom.kubernetes.labels }}
+        annotations: {{ .Values.filter.systemdcustom.kubernetes.annotations }}
+        useJournal: true
+        mergeLog: true
+        k8sLoggingParser: true
+        bufferSize: "1M"
+        useKubelet: false
+    - nest:
+        operation: lift
+        nestedUnder: kubernetes
+        addPrefix: kubernetes_
+    - modify:
+        rules:
+          - remove: stream
+          - remove: kubernetes_pod_id
+          - remove: kubernetes_host
+          - remove: kubernetes_container_hash
+    - nest:
+        operation: nest
+        wildcard:
+          - kubernetes_*
+        nestUnder: kubernetes
+        removePrefix: kubernetes_
+    # Filter pod names
+    - lua:
+        script:
+          key: filter_pods.lua
+          name: fluent-bit-systemd-lua
+        call: filter_pods
+        timeAsTable: true
+    # Reformat message
+    - lua:
+        script:
+          key: format.lua
+          name: fluent-bit-systemd-lua
+        call: format
+        timeAsTable: true
+    # Filter log levels
+    - lua:
+        script:
+          key: filter_loglevel.lua
+          name: fluent-bit-systemd-lua
+        call: filter_loglevel
+        timeAsTable: true
+{{- end }}

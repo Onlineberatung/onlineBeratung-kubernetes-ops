@@ -7,3 +7,10 @@ keywords:
 sources:
   - https://github.com/Onlineberatung/onlineBeratung-kubernetes-ops.git
 type: application
+dependencies:
+  - name: fluentbit
+    version: 0.0.1
+    condition: fluentbit.enabled
+  - name: opensearch-cluster
+    version: 0.0.1
+    condition: opensearch-cluster.enabled

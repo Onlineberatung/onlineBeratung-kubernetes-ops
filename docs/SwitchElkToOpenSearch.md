@@ -1,7 +1,7 @@
 # Switch ELK to OpenSearch
 
 To switch from a running ELK stack to OpenSearch, you need to do the following steps.
-The deployment have to be done in two steps, because OpenSearch will first start the operator and create the custom resources and in the second step it will start the Cluster.
+The deployment have to be done in multiple steps, because OpenSearch will first start the operator and create the custom resources and in the second step it will start the Cluster.
 
 ### Step 1: Deploy OpenSearch Operator
 In the first step you have to disable the ELK stack, adapt the values and start the OpenSearch Operator pod.
@@ -21,85 +21,15 @@ opensearch-cluster:
   namespace: <your namespace>
 ```
 
-3. Add the config for the new OpenSearch Logstash pod
-ingress.enabled needs to be disabled on first deploy
-```yaml
-opensearch-logstash:
-  service:
-    ports:
-      - name: http
-        port: 8080
-        protocol: TCP
-        targetPort: 8080
-  ingress:
-    enabled: false
-    annotations:
-      nginx.ingress.kubernetes.io/rewrite-target: /$1$2
-    className: "nginx"
-    pathtype: Prefix
-    hosts:
-      - host: "<your.domain.com>"
-        paths:
-          - path: /service/logstash
-            servicePort: 8080
-  fullnameOverride: "opensearch-logstash"
-  image: "opensearchproject/logstash-oss-with-opensearch-output-plugin"
-  persistence:
-    enabled: true
-  logstashConfig:
-    logstash.yml: |
-      http.host: 0.0.0.0
-      pipeline.ecs_compatibility: disabled
-  logstashPipeline:
-    logstash.conf: |
-      input {
-       http { 
-            port => 8080 # default: 8080, not 9600 
-            codec => "json" 
-          }
-      }
-      filter {
-         if [serviceName] != "frontend" and [serviceName] != "users" {
-            drop{}
-         }
-         if ![request][correlationId] or ![request][timestamp] {
-           drop{}
-         }
-      }
-      output {
-        opensearch
-        {
-          hosts => ["https://opensearch.<your namespace>:9200"]
-          user => '${ELASTICSEARCH_USERNAME}'
-          password => '${ELASTICSEARCH_PASSWORD}'
-          index => "http-log-%{+YYYY.MM.dd}" 
-          document_type => "json"
-          ssl_certificate_verification => false
-          ssl => true
-        }
-      }
-```
+3. Deploy the k8s-ops release to your helm chart
 
-#### In values-secrets.yaml set the following values:
-The user is the default admin user which is added by opensearch. 
-Because it is not reachable from outside you can use the default password.
+4. Follow the instructions inside [Opensearch](opensearch.md) to deploy the opensearch operator
 
-```yaml
-opensearch-logstash:
-  extraEnvs:
-    - name: "ELASTICSEARCH_USERNAME"
-      value: "admin"
-    - name: "ELASTICSEARCH_PASSWORD"
-      value: "admin"
-```
+5. Follow the instructions inside [Fluentd](fluentd.md) to deploy the fluentd operator and add the basic config to your values.yaml
 
-#### Deploy 
+### Step 2: Enable OpenSearch Cluster
 
-Run helm upgrade and wait until the opensearch-operator pod is up and running and the elk stack is disabled
-
-### Step 2: Enable OpenSearch Cluster and Logstash Ingress
-
-In the second step you have to enable the cluster and start the logstash ingress.
+In the second step you have to enable the cluster.
 
 #### In values.yaml set the following values:
 
@@ -109,23 +39,14 @@ opensearch-cluster:
   enabled: true
 ```
 
-2. Enable the logstash ingress
+2. (Optional) Change the logstash internal hosts from other services
 ```yaml
-opensearch-logstash:
-  ingress:
-    enabled: true
+logstashHost: "http://fluentbit-http-service.monitoring:8888"
 ```
 
-3. (Optional) Change the logstash internal hosts from other services
-```yaml
-logstashHost: "http://opensearch-logstash.<your namespace>:8080"
-```
+3. Deploy the k8s-ops release to your helm chart
 
-#### Deploy
-
-Run helm upgrade again and wait until all pods are up and running.
-
-That's it. Now you can forward the opensearch-dashboard service and login with the default credentials.
+### Step 3: Enable Fluentbit Operator
 
 ## Next Steps (optional)
 1. Configure your monitors with destinations and alerts.

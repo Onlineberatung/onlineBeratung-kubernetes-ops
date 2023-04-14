@@ -1,0 +1,12 @@
+{{- if and .Values.parser.systemdloglevel.enable -}}
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: systemd-loglevel
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  regex:
+    regex: '^.*(?<LOG_LEVEL>(WARN|INFO|DEBUG|ERROR|FATAL|TRACE|PANIC)) (?<LOG_MESSAGE>.*)$'
+{{- end }}
