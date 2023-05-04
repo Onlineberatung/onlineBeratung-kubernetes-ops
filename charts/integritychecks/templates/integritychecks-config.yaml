@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: integritychecks-{{ .Release.Name }}-config
+  namespace: {{ .Values.namespace | default "default" }}
+data:
+  ACTIVE_CHECKS: {{ (join "," .Values.activeChecks) | quote }}
+  VERBOSITY: {{ .Values.verbosity | default 0 | quote }}
+  LOG_PATH: {{ .Values.logPath | default "" | quote }}
+  {{- range $path, $config := .Values.mysql -}}
+    {{- if ne $path "password" -}}
+      {{- (printf "MYSQL_%s" (upper $path)) | nindent 2 }}: {{ $config | quote -}}
+    {{- end }}
+  {{- end }}
+  {{- range $path, $config := .Values.mongodb -}}
+    {{- if ne $path "password" -}}
+      {{ printf "MONGODB_%s" (upper $path) | nindent 2 }}: {{ $config | quote -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $path, $config := .Values.keycloak -}}
+    {{- if ne $path "password" -}}
+      {{ printf "KEYCLOAK_%s" (upper $path) | nindent 2 }}: {{ $config | quote -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $path, $config := .Values.opensearch -}}
+    {{- if ne $path "password" -}}
+      {{ printf "OPENSEARCH_%s" (upper $path) | nindent 2 }}: {{ $config | quote -}}
+    {{- end -}}
+  {{- end -}}

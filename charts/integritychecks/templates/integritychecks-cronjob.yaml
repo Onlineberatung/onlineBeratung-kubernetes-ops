@@ -1,0 +1,32 @@
+{{- $namespace := .Values.namespace | default "default" }}
+{{- $release_name := .Release.Name }}
+{{- range $job := .Values.jobs -}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: integritychecks-{{ $job.name }}-cronjob
+  namespace: {{ $namespace }}
+spec:
+  schedule: {{ $job.schedule }}
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            name: integritychecks-{{ $job.name }}-cronjob
+        spec:
+          containers:
+            - name: integritychecks-{{ $job.name }}
+              image: {{ $job.image }}:{{ $job.version }}
+              imagePullPolicy: Always
+              envFrom:
+                - configMapRef:
+                    name: integritychecks-{{ $release_name }}-config
+                - secretRef:
+                    name: integritychecks-{{ $release_name }}-secret
+          imagePullSecrets:
+            - name: registry-secret
+          restartPolicy: Never
+  {{- end -}}

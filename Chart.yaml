@@ -14,3 +14,6 @@ dependencies:
   - name: opensearch-cluster
     version: 0.0.1
     condition: opensearch-cluster.enabled
+  - name: integritychecks
+    version: 0.0.1
+    condition: integritychecks.enabled

@@ -1,0 +1,39 @@
+namespace: 'default'
+verbosity: 0
+logPath:
+jobs: []
+mysql:
+  user: 'root'
+  password: 'root'
+  host: 'mariadb.default'
+  port: 3306
+  db: 'userservice'
+mongodb:
+  user: 'admin'
+  password: 'admin'
+  host: 'mongodb.default'
+  port: 27017
+  db: 'rocketchat'
+keycloak:
+  host: 'keycloak.default'
+  path: '/auth'
+  user: 'admin'
+  password: 'admin'
+  protocol: 'http'
+  port: 80
+  realm: 'online-beratung'
+  client: 'admin-cli'
+  grantType: 'password'
+opensearch:
+  host: 'opensearch.default'
+  protocol: 'https'
+  port: 9200
+  user: 'admin'
+  password: 'admin'
+  index_prefix: 'integrity'
+teams:
+  webhookUrl:
+activeChecks:
+  - 'RocketChatToLdapInconsistency'
+  - 'LdapToRocketChatInconsistency'
+

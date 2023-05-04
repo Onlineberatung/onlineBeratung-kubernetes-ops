@@ -1,0 +1,6 @@
+name: integritychecks
+description: The chart checks the integrity on the cluster
+version: 0.0.1
+apiVersion: v1
+keywords:
+ - integritychecks

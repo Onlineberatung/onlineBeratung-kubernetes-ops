@@ -127,3 +127,7 @@ online-counseling-backup:
   backupGsCloudUserUUID: ""
   backupGsCloudApiToken: ""
   backupGsCloudClusterId: ""
+
+# Integrity checks
+integritychecks:
+  enabled: false
