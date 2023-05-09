@@ -9,6 +9,7 @@ metadata:
   namespace: {{ $namespace }}
 spec:
   schedule: {{ $job.schedule }}
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       backoffLimit: 0
