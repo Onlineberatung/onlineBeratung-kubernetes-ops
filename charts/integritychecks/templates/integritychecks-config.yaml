@@ -6,6 +6,7 @@ metadata:
 data:
   ACTIVE_CHECKS: {{ (join "," .Values.activeChecks) | quote }}
   VERBOSITY: {{ .Values.verbosity | default 0 | quote }}
+  FORCE: {{ .Values.force | default "false" | quote }}
   LOG_PATH: {{ .Values.logPath | default "" | quote }}
   {{- range $path, $config := .Values.mysql -}}
     {{- if ne $path "password" -}}
@@ -25,5 +26,10 @@ data:
   {{- range $path, $config := .Values.opensearch -}}
     {{- if ne $path "password" -}}
       {{ printf "OPENSEARCH_%s" (upper $path) | nindent 2 }}: {{ $config | quote -}}
+    {{- end -}}
+  {{- end -}}
+  {{- range $path, $config := .Values.rocketchat -}}
+    {{- if ne $path "password" -}}
+      {{ printf "ROCKETCHAT_%s" (upper $path) | nindent 2 }}: {{ $config | quote -}}
     {{- end -}}
   {{- end -}}
