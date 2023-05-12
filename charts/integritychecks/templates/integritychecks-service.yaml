@@ -1,0 +1,20 @@
+{{- $namespace := .Values.namespace | default "default" }}
+{{- $release_name := .Release.Name }}
+{{- range $service := .Values.services -}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    io.kompose.service: integritychecks-{{ $service.name }}
+  name: integritychecks-{{ $service.name }}
+spec:
+  ports:
+    - name: integritychecks-{{ $service.name }}-{{ $service.port }}
+      port: {{ $service.port }}
+      targetPort: {{ $service.port }}
+  selector:
+    io.kompose.service: integritychecks-{{ $service.name }}
+status:
+  loadBalancer: {}
+{{- end -}}

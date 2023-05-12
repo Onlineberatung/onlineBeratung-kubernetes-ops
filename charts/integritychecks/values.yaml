@@ -3,6 +3,7 @@ verbosity: 0
 force: 'false'
 logPath:
 jobs: []
+services: []
 mysql:
   user: 'root'
   password: 'root'
