@@ -1,5 +1,6 @@
 namespace: 'default'
 verbosity: 0
+force: 'false'
 logPath:
 jobs: []
 mysql:
@@ -31,6 +32,11 @@ opensearch:
   user: 'admin'
   password: 'admin'
   index_prefix: 'integrity'
+rocketchat:
+  url: 'rocketchat.default'
+  use_ssl: 'false'
+  user: 'rocketchat'
+  password: 'rocketchat'
 teams:
   webhookUrl:
 activeChecks:
