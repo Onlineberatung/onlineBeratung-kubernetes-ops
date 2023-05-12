@@ -1,0 +1,42 @@
+{{- $namespace := .Values.namespace | default "default" }}
+{{- $release_name := .Release.Name }}
+{{- range $service := .Values.services -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: integritychecks-{{ $service.name }}
+  namespace: {{ $namespace }}
+  labels:
+    io.kompose.service: integritychecks-{{ $service.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: integritychecks-{{ $service.name }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        io.kompose.network/database_network: "true"
+        io.kompose.network/frontend_network: "true"
+        io.kompose.network/service_network: "true"
+        io.kompose.service: integritychecks-{{ $service.name }}
+    spec:
+      containers:
+        - name: integritychecks-{{ $service.name }}
+          ports:
+            - containerPort: {{ $service.port }}
+          image: {{ $service.image }}:{{ $service.version }}
+          imagePullPolicy: Always
+          resources: {}
+          envFrom:
+            - configMapRef:
+                name: integritychecks-{{ $release_name }}-config
+            - secretRef:
+                name: integritychecks-{{ $release_name }}-secret
+      imagePullSecrets:
+        - name: registry-secret
+      restartPolicy: Always
+{{- end -}}
