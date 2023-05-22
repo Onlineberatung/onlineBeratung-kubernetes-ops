@@ -8,6 +8,7 @@ spec:
     version: 2.5.0
     httpPort: {{ .Values.httpPort }}
     vendor: opensearch
+    setVMMaxMapCount: true
     serviceName: {{ .Values.serviceName | default "opensearch" }}
     pluginsList: ["repository-s3"," https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/releases/download/2.5.0.0/prometheus-exporter-2.5.0.0.zip"]
   dashboards:
