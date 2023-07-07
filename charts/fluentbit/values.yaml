@@ -10,14 +10,12 @@ output:
   httpopensearch:
     logstashPrefix: "http"
 filter:
-  systemdcustom:
+  kubernetescustom:
     enable: false
     include_record: false # Include the original record in the output for debugging
     kubernetes:
       labels: false
       annotations: false
 parser:
-  systemdjson:
-    enable: false
-  systemdloglevel:
+  kubernetescustomloglevel:
     enable: false
