@@ -39,7 +39,7 @@ spec:
         annotations: {{ .Values.filter.kubernetescustom.kubernetes.annotations }}
         mergeLog: true
         mergeLogTrim: true
-        bufferSize: "1M"
+        bufferSize: "3M"
         useKubelet: false
     - nest:
         addPrefix: kubernetes_

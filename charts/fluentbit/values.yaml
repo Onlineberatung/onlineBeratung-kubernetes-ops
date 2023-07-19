@@ -5,6 +5,18 @@ ingress:
 input:
   http:
     enable: false
+  customtail:
+    tag: kube.*
+    bufferMaxSize: 3M
+    path: /var/log/containers/*.log
+    readFromHead: false
+    multilineParser: docker, cri
+    parser: cri
+    refreshIntervalSeconds: 10
+    memBufLimit: 3MB
+    skipLongLines: true
+    db: /fluent-bit/tail/pos.db
+    dbSync: Normal
 output:
   opensearch: {}
   httpopensearch:

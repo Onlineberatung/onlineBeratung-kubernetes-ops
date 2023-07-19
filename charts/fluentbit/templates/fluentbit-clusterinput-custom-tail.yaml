@@ -1,0 +1,25 @@
+{{- if .Values.input.customtail.enable -}}
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: customtail
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: logging
+spec:
+  tail:
+    tag: kube.*
+    bufferMaxSize: {{ .Values.input.customtail.bufferMaxSize }}
+    {{- if and .Values.input.customtail.multilineParser }}
+    multilineParser: {{ .Values.input.customtail.multilineParser }}
+    {{- else }}
+    parser: {{ .Values.input.customtail.parser }}
+    {{- end }}
+    path: {{ .Values.input.customtail.path }}
+    readFromHead: {{ .Values.input.customtail.readFromHead }}
+    refreshIntervalSeconds: {{ .Values.input.customtail.refreshIntervalSeconds }}
+    memBufLimit: {{ .Values.input.customtail.memBufLimit }}
+    skipLongLines: {{ .Values.input.customtail.skipLongLines }}
+    db: {{ .Values.input.customtail.db }}
+    dbSync: {{ .Values.input.customtail.dbSync }}
+{{- end }}
