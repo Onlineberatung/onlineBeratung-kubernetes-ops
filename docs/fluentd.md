@@ -20,7 +20,7 @@ fluentbit:
   input:
     tail:
       enable: false
-    customtail:
+    onlineberatungTail:
       enable: true
     http:
       enable: true
@@ -29,7 +29,7 @@ fluentbit:
   filter:
     kubernetes:
       enable: false
-    kubernetescustom:
+    kubernetesOnlineberatung:
       enable: true
       excluded:
         loglevels:

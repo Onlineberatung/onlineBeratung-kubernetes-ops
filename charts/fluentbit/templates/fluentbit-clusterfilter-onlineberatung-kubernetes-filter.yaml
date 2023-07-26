@@ -1,9 +1,9 @@
-{{- if and .Values.filter.kubernetescustom.enable -}}
-{{- if and .Values.parser.kubernetescustomloglevel.enable -}}
+{{- if and .Values.filter.kubernetesOnlineberatung.enable -}}
+{{- if and .Values.parser.kubernetesOnlineberatungLoglevel.enable -}}
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterParser
 metadata:
-  name: kubernetescustomloglevel
+  name: onlineberatung-kubernetes-loglevel
   namespace: {{ .Values.namespace | default "default" }}
   labels:
     fluentbit.fluent.io/enabled: "true"
@@ -15,7 +15,7 @@ spec:
 apiVersion: fluentbit.fluent.io/v1alpha2
 kind: ClusterFilter
 metadata:
-  name: kubernetescustom
+  name: onlineberatung-kubernetes
   namespace: {{ .Values.namespace | default "default" }}
   labels:
     fluentbit.fluent.io/enabled: "true"
@@ -24,10 +24,10 @@ spec:
   match: kube.*
   filters:
     # Parse log level
-    {{ if and .Values.parser.kubernetescustomloglevel.enable -}}
+    {{ if and .Values.parser.kubernetesOnlineberatungLoglevel.enable -}}
     - parser:
         keyName: log
-        parser: kubernetescustomloglevel
+        parser: onlineberatung-kubernetes-loglevel
         reserveData: true
         preserveKey: true
     {{ end }}
@@ -35,8 +35,8 @@ spec:
         kubeCAFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
         kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
         kubeURL: https://kubernetes.default.svc:443
-        labels: {{ .Values.filter.kubernetescustom.kubernetes.labels }}
-        annotations: {{ .Values.filter.kubernetescustom.kubernetes.annotations }}
+        labels: {{ .Values.filter.kubernetesOnlineberatung.kubernetes.labels }}
+        annotations: {{ .Values.filter.kubernetesOnlineberatung.kubernetes.annotations }}
         mergeLog: true
         mergeLogTrim: true
         bufferSize: "3M"
@@ -61,26 +61,26 @@ spec:
     - lua:
         script:
           key: filter_pods.lua
-          name: fluent-kubernetescustom-lua
+          name: fluent-onlineberatung-kubernetes-lua
         call: filter_pods
     # Reformat message
     - lua:
         script:
           key: format.lua
-          name: fluent-kubernetescustom-lua
+          name: fluent-onlineberatung-kubernetes-lua
         call: format
         timeAsTable: true
     # Filter log levels
     - lua:
         script:
           key: filter_loglevel.lua
-          name: fluent-kubernetescustom-lua
+          name: fluent-onlineberatung-kubernetes-lua
         call: filter_loglevel
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: fluent-kubernetescustom-lua
+  name: fluent-onlineberatung-kubernetes-lua
   namespace: {{ .Values.namespace | default "default" }}
 data:
   filter_pods.lua: |
@@ -100,9 +100,9 @@ data:
         return -1, 0, 0
       end
 
-      {{ if .Values.filter.kubernetescustom.excluded }}{{ if .Values.filter.kubernetescustom.excluded.pods }}
+      {{ if .Values.filter.kubernetesOnlineberatung.excluded }}{{ if .Values.filter.kubernetesOnlineberatung.excluded.pods }}
       local excludedPods = {
-        {{- range $_, $p := .Values.filter.kubernetescustom.excluded.pods }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.excluded.pods }}
           ['{{ $p }}']=true,
         {{- end }}
       }
@@ -112,9 +112,9 @@ data:
       end
       {{ end }}{{ end }}
 
-      {{ if .Values.filter.kubernetescustom.included }}{{ if .Values.filter.kubernetescustom.included.pods }}
+      {{ if .Values.filter.kubernetesOnlineberatung.included }}{{ if .Values.filter.kubernetesOnlineberatung.included.pods }}
       local includedPods = {
-        {{- range $_, $p := .Values.filter.kubernetescustom.included.pods }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.included.pods }}
           ['{{ $p }}']=true,
         {{- end }}
       }
@@ -131,7 +131,7 @@ data:
     function format(tag, timestamp, record)
       new_record = {}
 
-      {{ if .Values.filter.kubernetescustom.include_record }}
+      {{ if .Values.filter.kubernetesOnlineberatung.include_record }}
       new_record["record"] = record
       {{ end }}
 
@@ -248,9 +248,9 @@ data:
 
   filter_loglevel.lua: |
     function filter_loglevel(tag, timestamp, record)
-      {{ if .Values.filter.kubernetescustom.excluded }}{{ if .Values.filter.kubernetescustom.excluded.loglevels }}
+      {{ if .Values.filter.kubernetesOnlineberatung.excluded }}{{ if .Values.filter.kubernetesOnlineberatung.excluded.loglevels }}
       local excludedLogLevels = {
-        {{- range $_, $p := .Values.filter.kubernetescustom.excluded.loglevels }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.excluded.loglevels }}
           ['{{ $p }}']=true,
         {{- end }}
       }
@@ -260,9 +260,9 @@ data:
       end
       {{ end }}{{ end }}
 
-      {{ if .Values.filter.kubernetescustom.included }}{{ if .Values.filter.kubernetescustom.included.loglevels }}
+      {{ if .Values.filter.kubernetesOnlineberatung.included }}{{ if .Values.filter.kubernetesOnlineberatung.included.loglevels }}
       local includedLogLevels = {
-        {{- range $_, $p := .Values.filter.kubernetescustom.included.loglevels }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.included.loglevels }}
           ['{{ $p }}']=true,
         {{- end }}
       }

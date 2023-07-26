@@ -1,0 +1,25 @@
+{{- if .Values.input.onlineberatungTail.enable -}}
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterInput
+metadata:
+  name: onlineberatung-tail
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: logging
+spec:
+  tail:
+    tag: kube.*
+    bufferMaxSize: {{ .Values.input.onlineberatungTail.bufferMaxSize }}
+    {{- if and .Values.input.onlineberatungTail.multilineParser }}
+    multilineParser: {{ .Values.input.onlineberatungTail.multilineParser }}
+    {{- else }}
+    parser: {{ .Values.input.onlineberatungTail.parser }}
+    {{- end }}
+    path: {{ .Values.input.onlineberatungTail.path }}
+    readFromHead: {{ .Values.input.onlineberatungTail.readFromHead }}
+    refreshIntervalSeconds: {{ .Values.input.onlineberatungTail.refreshIntervalSeconds }}
+    memBufLimit: {{ .Values.input.onlineberatungTail.memBufLimit }}
+    skipLongLines: {{ .Values.input.onlineberatungTail.skipLongLines }}
+    db: {{ .Values.input.onlineberatungTail.db }}
+    dbSync: {{ .Values.input.onlineberatungTail.dbSync }}
+{{- end }}

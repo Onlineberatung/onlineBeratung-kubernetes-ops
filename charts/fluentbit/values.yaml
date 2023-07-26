@@ -5,7 +5,7 @@ ingress:
 input:
   http:
     enable: false
-  customtail:
+  onlineberatungTail:
     tag: kube.*
     bufferMaxSize: 3M
     path: /var/log/containers/*.log
@@ -22,12 +22,12 @@ output:
   httpopensearch:
     logstashPrefix: "http"
 filter:
-  kubernetescustom:
+  kubernetesOnlineberatung:
     enable: false
     include_record: false # Include the original record in the output for debugging
     kubernetes:
       labels: false
       annotations: false
 parser:
-  kubernetescustomloglevel:
+  kubernetesOnlineberatungLoglevel:
     enable: false
