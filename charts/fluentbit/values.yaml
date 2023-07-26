@@ -5,19 +5,29 @@ ingress:
 input:
   http:
     enable: false
+  onlineberatungTail:
+    tag: kube.*
+    bufferMaxSize: 3M
+    path: /var/log/containers/*.log
+    readFromHead: false
+    multilineParser: docker, cri
+    parser: cri
+    refreshIntervalSeconds: 10
+    memBufLimit: 3MB
+    skipLongLines: true
+    db: /fluent-bit/tail/pos.db
+    dbSync: Normal
 output:
   opensearch: {}
   httpopensearch:
     logstashPrefix: "http"
 filter:
-  systemdcustom:
+  kubernetesOnlineberatung:
     enable: false
     include_record: false # Include the original record in the output for debugging
     kubernetes:
       labels: false
       annotations: false
 parser:
-  systemdjson:
-    enable: false
-  systemdloglevel:
+  kubernetesOnlineberatungLoglevel:
     enable: false

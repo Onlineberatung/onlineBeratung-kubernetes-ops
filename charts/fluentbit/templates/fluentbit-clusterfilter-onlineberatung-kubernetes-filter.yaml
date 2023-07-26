@@ -1,8 +1,86 @@
-{{- if and .Values.filter.systemdcustom.enable -}}
+{{- if and .Values.filter.kubernetesOnlineberatung.enable -}}
+{{- if and .Values.parser.kubernetesOnlineberatungLoglevel.enable -}}
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterParser
+metadata:
+  name: onlineberatung-kubernetes-loglevel
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+spec:
+  regex:
+    regex: '^.*(?<LOG_LEVEL>(WARN|INFO|DEBUG|ERROR|FATAL|TRACE|PANIC)) (?<LOG_MESSAGE>.*)$'
+{{- end }}
+---
+apiVersion: fluentbit.fluent.io/v1alpha2
+kind: ClusterFilter
+metadata:
+  name: onlineberatung-kubernetes
+  namespace: {{ .Values.namespace | default "default" }}
+  labels:
+    fluentbit.fluent.io/enabled: "true"
+    fluentbit.fluent.io/component: logging
+spec:
+  match: kube.*
+  filters:
+    # Parse log level
+    {{ if and .Values.parser.kubernetesOnlineberatungLoglevel.enable -}}
+    - parser:
+        keyName: log
+        parser: onlineberatung-kubernetes-loglevel
+        reserveData: true
+        preserveKey: true
+    {{ end }}
+    - kubernetes:
+        kubeCAFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        kubeTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+        kubeURL: https://kubernetes.default.svc:443
+        labels: {{ .Values.filter.kubernetesOnlineberatung.kubernetes.labels }}
+        annotations: {{ .Values.filter.kubernetesOnlineberatung.kubernetes.annotations }}
+        mergeLog: true
+        mergeLogTrim: true
+        bufferSize: "3M"
+        useKubelet: false
+    - nest:
+        addPrefix: kubernetes_
+        nestedUnder: kubernetes
+        operation: lift
+    - modify:
+        rules:
+          - remove: stream
+          - remove: kubernetes_pod_id
+          - remove: kubernetes_host
+          - remove: kubernetes_container_hash
+    - nest:
+        nestUnder: kubernetes
+        operation: nest
+        removePrefix: kubernetes_
+        wildcard:
+          - kubernetes_*
+    # Filter pod names
+    - lua:
+        script:
+          key: filter_pods.lua
+          name: fluent-onlineberatung-kubernetes-lua
+        call: filter_pods
+    # Reformat message
+    - lua:
+        script:
+          key: format.lua
+          name: fluent-onlineberatung-kubernetes-lua
+        call: format
+        timeAsTable: true
+    # Filter log levels
+    - lua:
+        script:
+          key: filter_loglevel.lua
+          name: fluent-onlineberatung-kubernetes-lua
+        call: filter_loglevel
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: fluent-bit-systemd-lua
+  name: fluent-onlineberatung-kubernetes-lua
   namespace: {{ .Values.namespace | default "default" }}
 data:
   filter_pods.lua: |
@@ -11,7 +89,7 @@ data:
       if not record["kubernetes"] then
         return -1, 0, 0
       end
-      
+
       -- Ignore fluent-bit logs
       if record["kubernetes"]["container_name"] == "fluent-bit" then
         return -1, 0, 0
@@ -21,39 +99,39 @@ data:
       if not record["kubernetes"]["container_name"] then
         return -1, 0, 0
       end
-    
-      {{ if .Values.filter.systemdcustom.excluded }}{{ if .Values.filter.systemdcustom.excluded.pods }}
+
+      {{ if .Values.filter.kubernetesOnlineberatung.excluded }}{{ if .Values.filter.kubernetesOnlineberatung.excluded.pods }}
       local excludedPods = {
-        {{- range $_, $p := .Values.filter.systemdcustom.excluded.pods }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.excluded.pods }}
           ['{{ $p }}']=true,
         {{- end }}
       }
-    
+
       if excludedPods[record["kubernetes"]["container_name"]] then
         return -1, 0, 0
       end
       {{ end }}{{ end }}
-    
-      {{ if .Values.filter.systemdcustom.included }}{{ if .Values.filter.systemdcustom.included.pods }}
+
+      {{ if .Values.filter.kubernetesOnlineberatung.included }}{{ if .Values.filter.kubernetesOnlineberatung.included.pods }}
       local includedPods = {
-        {{- range $_, $p := .Values.filter.systemdcustom.included.pods }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.included.pods }}
           ['{{ $p }}']=true,
         {{- end }}
       }
-    
+
       if not includedPods[record["kubernetes"]["container_name"]] then
         return -1, 0, 0
       end
       {{ end }}{{ end }}
-    
-      return 1, timestamp, record
+
+      return 2, timestamp, record
     end
 
   format.lua: |
     function format(tag, timestamp, record)
       new_record = {}
-    
-      {{ if .Values.filter.systemdcustom.include_record }}
+
+      {{ if .Values.filter.kubernetesOnlineberatung.include_record }}
       new_record["record"] = record
       {{ end }}
 
@@ -70,13 +148,13 @@ data:
       new_record["serviceName"] = record["kubernetes"]["container_name"]
       new_record["log"]["org"] = record["MESSAGE"]
       new_record["log"]["message"] = record["MESSAGE"]
-    
+
       new_record = parseSystemdMessage(record, new_record)
       -- If systemd massage was parsed with level and message, use it
       if new_record["log"]["level"] then
         return 1, timestamp, new_record
       end
-    
+
       if record["kubernetes"]["container_name"] == "rocketchat" then
         return 1, timestamp, parseRocketchatMessage(record, new_record)
       elseif record["kubernetes"]["container_name"] == "mongodb" then
@@ -85,9 +163,9 @@ data:
         return 1, timestamp, parseUserserviceMessage(record, new_record)
       end
 
-      return 1, timestamp, new_record
+      return 2, timestamp, new_record
     end
-    
+
     function parseSystemdMessage(record, new_record)
       if record["LOG_MESSAGE"] and record["LOG_MESSAGE"] ~= "" then
         new_record["log"]["message"] = record["LOG_MESSAGE"]
@@ -95,10 +173,10 @@ data:
       if record["LOG_LEVEL"] and record["LOG_LEVEL"] ~= "" then
         new_record["log"]["level"] = record["LOG_LEVEL"]
       end
-    
+
       return new_record
     end
-    
+
     function parseRocketchatMessage(record, new_record)
       new_record["log"]["message"] = ""
       if record["msg"] and record["msg"] ~= "" then
@@ -134,7 +212,7 @@ data:
 
       return new_record
     end
-    
+
     function parseMongoDBMessage(record, new_record)
       if record["msg"] then
           new_record["log"]["message"] = record["msg"]
@@ -150,10 +228,10 @@ data:
       else
         new_record["log"]["level"] = "DEBUG"
       end
-    
+
       return new_record
     end
-    
+
     function parseUserserviceMessage(record, new_record)
       -- Read msg for json input (userservice)
       if record["log"] then
@@ -164,69 +242,36 @@ data:
           new_record["log"]["level"] = record["log"]["level"]
         end
       end
-    
+
       return new_record
     end
 
   filter_loglevel.lua: |
     function filter_loglevel(tag, timestamp, record)
-      {{ if .Values.filter.systemdcustom.excluded }}{{ if .Values.filter.systemdcustom.excluded.loglevels }}
+      {{ if .Values.filter.kubernetesOnlineberatung.excluded }}{{ if .Values.filter.kubernetesOnlineberatung.excluded.loglevels }}
       local excludedLogLevels = {
-        {{- range $_, $p := .Values.filter.systemdcustom.excluded.loglevels }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.excluded.loglevels }}
           ['{{ $p }}']=true,
         {{- end }}
       }
-    
+
       if record["log"]["level"] and excludedLogLevels[record["log"]["level"]] then
         return -1, 0, 0
       end
       {{ end }}{{ end }}
-    
-      {{ if .Values.filter.systemdcustom.included }}{{ if .Values.filter.systemdcustom.included.loglevels }}
+
+      {{ if .Values.filter.kubernetesOnlineberatung.included }}{{ if .Values.filter.kubernetesOnlineberatung.included.loglevels }}
       local includedLogLevels = {
-        {{- range $_, $p := .Values.filter.systemdcustom.included.loglevels }}
+        {{- range $_, $p := .Values.filter.kubernetesOnlineberatung.included.loglevels }}
           ['{{ $p }}']=true,
         {{- end }}
       }
-    
+
       if (not record["log"]["level"]) or (not includedLogLevels[record["log"]["level"]]) then
         return -1, 0, 0
       end
       {{ end }}{{ end }}
 
-      return 1, timestamp, record
+      return 2, timestamp, record
     end
 {{- end }}
-
-### Userservice Example
-# {"CID":"a1c1728d-88d6-4155-8543-0bf10163f181","serviceName":"users","timestamp":"2023-04-06T08:42:01.651Z","request":{"correlationId":"a1c1728d-88d6-4155-8543-0bf10163f181","timestamp":"null"},"log":{"level":"INFO","levelValue":49435,"logger":"de.caritas.cob.userservice.api.Messenger","message":"Ignoring non-temp chat (4DuDLgoEGTQaiLHCh) of user (KumvKJoDgNTRyMkoh)","thread":"http-nio-8080-exec-4","stack":""}}
-
-### Rocket.chat Example
-# {"level":50,"time":"2023-03-29T22:45:56.341Z","pid":1,"hostname":"rocketchat-5845659777-mrgh9","name":"System","msg":"No real time data received recently"}
-
-### MongoDB Example
-# {"t":{"$date":"2023-04-05T01:18:51.641+00:00"},"s":"I",  "c":"ACCESS",   "id":20250,   "ctx":"conn263482","msg":"Authentication succeeded","attr":{"mechanism":"SCRAM-SHA-1","speculative":false,"principalName":"rocketchat","authenticationDatabase":"rocketchat","remote":"10.244.128.9:47852","extraInfo":{}}}
-
-### Example
-#  ",
-#  "_SYSTEMD_CGROUP"=>"/podruntime.slice/docker.service",
-#  "_SYSTEMD_UNIT"=>"docker.service",
-#  "_SYSTEMD_SLICE"=>"podruntime.slice",
-#  "_SYSTEMD_INVOCATION_ID"=>"14c5e53c9fa4409f9fe843cdbd928978",
-#  "_BOOT_ID"=>"3f1804e48a5043d2befcffa694521bc8",
-#  "_MACHINE_ID"=>"5d0b03b3eac649e4b59869956fa11fff",
-#  "_HOSTNAME"=>"node-pool0-0",
-#  "CONTAINER_ID_FULL"=>"e6e1d937d64db07ef7e4bd74237d8f9bc09e20862013cec86e8ffc8d87d78622",
-#  "CONTAINER_NAME"=>"k8s_prosody_prosody-57c577ccf9-8vrqx_jitsi_b00d95ce-45db-44f5-b173-fa99bb4c9d81_0",
-#  "CONTAINER_TAG"=>"e6e1d937d64d",
-#  "IMAGE_NAME"=>"jitsi/prosody@sha256:2e3b611ebeeb3a50ebe54ae59bca9fc7eeb4fb109c10f49fb0e2b8ce4ac843aa",
-#  "SYSLOG_IDENTIFIER"=>"e6e1d937d64d",
-#  "CONTAINER_ID"=>"e6e1d937d64d",
-#  "MESSAGE"=>"c2s560d1c6d5f10                                              debug	Sending[c2s]: <presence from='jvbbrewery@internal-muc.meet.jitsi/jvb-7786568c5f-nvtqc' xml:lang='en-US' to='jvb@auth.meet.jitsi/nE_-k8L1gmc8'>",
-#  "_SOURCE_REALTIME_TIMESTAMP"=>"1679660499683565",
-#  "kubernetes"=>{"pod_name"=>"prosody-57c577ccf9-8vrqx",
-#  "namespace_name"=>"jitsi",
-#  "container_name"=>"prosody",
-#  "docker_id"=>"e6e1d937d64db07ef7e4bd74237d8f9bc09e20862013cec86e8ffc8d87d78622",
-#  "container_image"=>"jitsi/prosody:stable-8252"
-#}}]
