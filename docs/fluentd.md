@@ -19,26 +19,22 @@ fluentbit:
     enable: true
   input:
     tail:
+      enable: false
+    customtail:
       enable: true
-      parser: docker
-      refreshIntervalSeconds: 10
-      memBufLimit: 5MB
-      skipLongLines: true
-      db: /fluent-bit/tail/pos.db
-      dbSync: Normal
-      multiline: true
     http:
       enable: true
     systemd:
       enable: false
-  parser:
-    kubernetescustomloglevel:
-      enable: true
   filter:
     kubernetes:
       enable: false
     kubernetescustom:
       enable: true
+      excluded:
+        loglevels:
+          - INFO
+          - DEBUG
       included:
         pods:
           - mongodb
@@ -61,7 +57,7 @@ fluentbit:
     stdout:
       enable: false
     opensearch:
-      bufferSize: "1M"
+      bufferSize: "20M"
       host: opensearch.monitoring
       port: 9200
       suppressTypeName: true
