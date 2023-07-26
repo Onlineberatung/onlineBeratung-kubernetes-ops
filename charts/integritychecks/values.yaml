@@ -4,6 +4,11 @@ force: 'false'
 logPath:
 jobs: []
 services: []
+inxmail:
+  api:
+    url: 'https://{spaceid}.api.inxmail-commerce.com/api-service/v1'
+    id: ''
+    key: ''
 mysql:
   user: 'root'
   password: 'root'
