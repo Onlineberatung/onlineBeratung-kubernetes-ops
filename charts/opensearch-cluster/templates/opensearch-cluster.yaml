@@ -50,8 +50,8 @@ spec:
           memory: "2Gi"
           cpu: "500m"
         limits:
-          memory: "2Gi"
-          cpu: "500m"
+          memory: "3Gi"
+          cpu: "1000m"
       roles:
         - "cluster_manager"
         - "data"
@@ -64,8 +64,8 @@ spec:
           memory: "2Gi"
           cpu: "500m"
         limits:
-          memory: "2Gi"
-          cpu: "500m"
+          memory: "3Gi"
+          cpu: "1000m"
       roles:
         - "data"
     - component: coordinators
@@ -77,7 +77,7 @@ spec:
           memory: "2Gi"
           cpu: "500m"
         limits:
-          memory: "2Gi"
-          cpu: "500m"
+          memory: "3Gi"
+          cpu: "1000m"
       roles:
         - "ingest"
