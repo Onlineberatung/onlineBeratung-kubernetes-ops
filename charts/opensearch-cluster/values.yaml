@@ -1,4 +1,6 @@
 httpPort: 9200
+general:
+  version: 2.5.0
 dashboard:
   enabled: true
   version: 2.5.0

@@ -1,7 +1,8 @@
 # Opensearch
 
 #### Add the repository
-`helm repo add opensearch-operator https://opster.github.io/opensearch-k8s-operator/`
+`helm repo remove opensearch-operator`
+`helm repo add opensearch-operator https://opensearch-project.github.io/opensearch-k8s-operator/`
 
 #### Update the repository
 `helm repo update`
