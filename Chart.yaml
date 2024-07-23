@@ -17,3 +17,7 @@ dependencies:
   - name: integritychecks
     version: 0.0.1
     condition: integritychecks.enabled
+  - name: zipkin
+    version: 0.3.3
+    repository: https://zipkin.io/zipkin-helm
+    condition: zipkin.enabled
