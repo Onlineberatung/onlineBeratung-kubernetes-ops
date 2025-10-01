@@ -13,5 +13,7 @@ backupGsCloudUserUUID: "provide value for local testing"
 backupGsCloudApiToken: "provide value for local testing"
 backupPostgresHost: "provide value for local testing"
 backupPostgresPassword: ""
+backupBudibaseAdmin: "provide value for local testing"
+backupBudibaseAdminPass: ""
 backupEncryptionKey: "defaultEncryptionKey"
 backupsToKeep: 7
