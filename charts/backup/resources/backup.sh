@@ -100,7 +100,7 @@ then
   echo "Finished Postgres backup"
 fi
 
-if [ -n "$BUDIBASE_ADMIN_PASS" ]
+if [ -n "$BUDIBASE_COUCHDB_ADMIN_PASS" ]
 then
   echo "Starting CouchDB backup"
   # Get the CouchDB pod using selector (similar to openldap approach)
@@ -130,7 +130,7 @@ then
           fi
 
           # Get all databases and save to _all_dbs.json first
-          kubectl exec -i $couchdb_pod -n budibase -- curl -s -m 30 -X GET "http://$BUDIBASE_ADMIN:$BUDIBASE_ADMIN_PASS@localhost:5984/_all_dbs" > "couchdb_backup/_all_dbs.json"
+          kubectl exec -i $couchdb_pod -n budibase -- curl -s -m 30 -X GET "http://$BUDIBASE_COUCHDB_ADMIN:$BUDIBASE_COUCHDB_ADMIN_PASS@localhost:5984/_all_dbs" > "couchdb_backup/_all_dbs.json"
 
           # Check if the call was successful
           if [ -s "couchdb_backup/_all_dbs.json" ] && ! grep -q '"error"' "couchdb_backup/_all_dbs.json"; then
@@ -186,7 +186,7 @@ then
                       fi
 
                       # Attempt backup with timeout
-                      timeout 300 kubectl exec -i $couchdb_pod -n budibase -- curl -s -m 120 -X GET "http://$BUDIBASE_ADMIN:$BUDIBASE_ADMIN_PASS@localhost:5984/$database/_all_docs?include_docs=true" > "couchdb_backup/$database.json"
+                      timeout 300 kubectl exec -i $couchdb_pod -n budibase -- curl -s -m 120 -X GET "http://$BUDIBASE_COUCHDB_ADMIN:$BUDIBASE_COUCHDB_ADMIN_PASS@localhost:5984/$database/_all_docs?include_docs=true" > "couchdb_backup/$database.json"
 
                       # Check if backup was successful
                       if [ -s "couchdb_backup/$database.json" ] && grep -q '"rows":' "couchdb_backup/$database.json"; then
