@@ -100,143 +100,70 @@ then
   echo "Finished Postgres backup"
 fi
 
+# BUDIBASE BACKUP USING OFFICIAL CLI
 if [ -n "$BUDIBASE_COUCHDB_ADMIN_PASS" ]
 then
-  echo "Starting CouchDB backup"
-  # Get the CouchDB pod using selector (similar to openldap approach)
-  couchdb_pod=$(kubectl get pods --selector app=couchdb -n budibase | grep couchdb)
-  couchdb_pod=$(echo $couchdb_pod | head -n1 | cut -d " " -f1)
+  echo "Starting Budibase backup"
 
-  if [ -z "$couchdb_pod" ]; then
-      echo "Error: Could not find CouchDB pod in budibase namespace"
-      echo "Available pods in budibase namespace:"
-      kubectl get pods -n budibase
-  else
-      echo "Found CouchDB pod: $couchdb_pod"
+  # Install Node.js 18+ (required for Budibase CLI)
+  # Alpine 3.16 has Node 16, we need to install a newer version manually
+  apk add --update --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/v3.18/main nodejs npm
 
-      # Create backup directory
-      mkdir -p couchdb_backup
+  # Verify Node version
+  echo "Node.js version: $(node --version)"
 
-      # IMPROVED APPROACH: Get _all_dbs first (we know this works!)
-      echo "Getting list of databases..."
-      RETRY_COUNT=0
-      MAX_RETRIES=3
-      SUCCESS=false
+  npm install -g @budibase/cli
 
-      while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
-          if [ $RETRY_COUNT -gt 0 ]; then
-              echo "Retry $RETRY_COUNT for database list..."
-              sleep 5
-          fi
-
-          # Get all databases and save to _all_dbs.json first
-          kubectl exec -i $couchdb_pod -n budibase -- curl -s -m 30 -X GET "http://$BUDIBASE_COUCHDB_ADMIN:$BUDIBASE_COUCHDB_ADMIN_PASS@localhost:5984/_all_dbs" > "couchdb_backup/_all_dbs.json"
-
-          # Check if the call was successful
-          if [ -s "couchdb_backup/_all_dbs.json" ] && ! grep -q '"error"' "couchdb_backup/_all_dbs.json"; then
-              echo "Successfully retrieved database list"
-              # Extract database names from the working _all_dbs.json file
-              jq -r '.[]' "couchdb_backup/_all_dbs.json" | grep -v '^_' > databases.txt
-              SUCCESS=true
-          else
-              echo "Database list attempt $((RETRY_COUNT + 1)) failed"
-              if [ -f "couchdb_backup/_all_dbs.json" ]; then
-                  echo "Response: $(head -n 1 couchdb_backup/_all_dbs.json)"
-              fi
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-          fi
-      done
-
-      if [ "$SUCCESS" = false ]; then
-          echo "Failed to get database list after $MAX_RETRIES attempts"
-          exit 1
-      fi
-
-      # Check if we got any databases
-      if [ ! -s databases.txt ]; then
-          echo "Warning: No user databases found"
-      else
-          echo "Found databases:"
-          cat databases.txt
-          DB_COUNT=$(wc -l < databases.txt)
-          echo "Total databases to backup: $DB_COUNT"
-
-          # FIXED: Use a different approach for the while loop
-          BACKUP_COUNT=0
-          FAILED_COUNT=0
-
-          # Read database names into an array first
-          readarray -t DB_ARRAY < databases.txt
-
-          # Process each database in the array
-          for database in "${DB_ARRAY[@]}"; do
-              if [ ! -z "$database" ]; then
-                  BACKUP_COUNT=$((BACKUP_COUNT + 1))
-                  echo "[$BACKUP_COUNT/$DB_COUNT] Backing up database: $database"
-
-                  # Add timeout and retry mechanism
-                  RETRY_COUNT=0
-                  MAX_RETRIES=3
-                  SUCCESS=false
-
-                  while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$SUCCESS" = false ]; do
-                      if [ $RETRY_COUNT -gt 0 ]; then
-                          echo "  Retry $RETRY_COUNT for database: $database"
-                          sleep 2
-                      fi
-
-                      # Attempt backup with timeout
-                      timeout 300 kubectl exec -i $couchdb_pod -n budibase -- curl -s -m 120 -X GET "http://$BUDIBASE_COUCHDB_ADMIN:$BUDIBASE_COUCHDB_ADMIN_PASS@localhost:5984/$database/_all_docs?include_docs=true" > "couchdb_backup/$database.json"
-
-                      # Check if backup was successful
-                      if [ -s "couchdb_backup/$database.json" ] && grep -q '"rows":' "couchdb_backup/$database.json"; then
-                          echo "Successfully backed up database: $database"
-                          SUCCESS=true
-                      else
-                          echo "Backup attempt $((RETRY_COUNT + 1)) failed for database: $database"
-                          RETRY_COUNT=$((RETRY_COUNT + 1))
-
-                          # Show file size for debugging
-                          if [ -f "couchdb_backup/$database.json" ]; then
-                              FILE_SIZE=$(stat -c%s "couchdb_backup/$database.json" 2>/dev/null || echo "unknown")
-                              echo "    File size: $FILE_SIZE bytes"
-                              # Show first few lines for debugging
-                              echo "    First few lines:"
-                              head -n 3 "couchdb_backup/$database.json" 2>/dev/null || echo "    Could not read file"
-                          fi
-                      fi
-                  done
-
-                  if [ "$SUCCESS" = false ]; then
-                      echo "Failed to backup database after $MAX_RETRIES attempts: $database"
-                      FAILED_COUNT=$((FAILED_COUNT + 1))
-                      # Remove failed backup file
-                      rm -f "couchdb_backup/$database.json"
-                  fi
-              fi
-          done
-
-          echo "Backup summary: $BACKUP_COUNT databases processed, $FAILED_COUNT failed"
-      fi
-
-      # _all_dbs.json is already backed up from the first step!
-      echo "Database configuration already backed up as _all_dbs.json"
-
-      # Create compressed archive
-      FILE_NAME=$(date +"%FT%H%M%S"_couchdb_backup.tar.gz)
-      tar -zcvf $FILE_NAME couchdb_backup
-      rm -rf couchdb_backup databases.txt
-
-      # Encrypt and upload
-      echo $BACKUP_ENCRYPTION_KEY | gpg --batch -c --passphrase-fd 0 $FILE_NAME && rm $FILE_NAME
-      s3cmd put $FILE_NAME.gpg $BUCKET_NAME
-      echo "Finished CouchDB backup"
+  if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to install Budibase CLI"
+      exit 1
   fi
+
+  COUCHDB_HOST="budibase-svc-couchdb.budibase.svc.cluster.local"
+  MINIO_HOST="minio-service.budibase.svc.cluster.local"
+
+  # Create environment file for Budibase CLI
+  cat > /tmp/budibase-backup.env << EOF
+COUCH_DB_URL=http://${BUDIBASE_COUCHDB_ADMIN}:${BUDIBASE_COUCHDB_ADMIN_PASS}@${COUCHDB_HOST}:5984/
+MINIO_URL=http://${MINIO_HOST}:9000/
+MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+MAIN_PORT=10000
+EOF
+
+  FILE_NAME=$(date +"%FT%H%M%S"_budibase_backup.tar.gz)
+
+  budi backups --export "$FILE_NAME" --env /tmp/budibase-backup.env
+
+  # Verify backup file was created
+  if [ ! -f "$FILE_NAME" ]; then
+      echo "ERROR: Budibase backup file was not created!"
+      rm -f /tmp/budibase-backup.env
+      exit 1
+  fi
+
+  echo "$BACKUP_ENCRYPTION_KEY" | gpg --batch -c --passphrase-fd 0 "$FILE_NAME" && rm -f "$FILE_NAME"
+
+  s3cmd put "${FILE_NAME}.gpg" "$BUCKET_NAME"
+
+  # Verify upload success
+  if [ $? -eq 0 ]; then
+      echo "Budibase backup uploaded successfully to S3"
+      rm -f "${FILE_NAME}.gpg"
+  else
+      echo "ERROR: Failed to upload Budibase backup to S3!"
+      rm -f /tmp/budibase-backup.env
+      exit 1
+  fi
+
+  rm -f /tmp/budibase-backup.env
+
+  echo "Finished Budibase backup"
 fi
 
 echo "Deleting old backups while keeping most recent $BACKUPS_TO_KEEP"
 s3cmd ls $BUCKET_NAME > /backups.txt
-declare -a BACKUP_NAMES=( "mariadb_backup.tar.gz.gpg" "mongodb_backup.tar.gz.gpg" "ldap_backup.ldif.gpg" "postgres_dump.tar.gz.gpg" "couchdb_backup.tar.gz.gpg" )
+declare -a BACKUP_NAMES=( "mariadb_backup.tar.gz.gpg" "mongodb_backup.tar.gz.gpg" "ldap_backup.ldif.gpg" "postgres_dump.tar.gz.gpg" "budibase_backup.tar.gz.gpg" )
 for backup in "${BACKUP_NAMES[@]}"
 do
   COUNT=0

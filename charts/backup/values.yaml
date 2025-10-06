@@ -15,5 +15,7 @@ backupPostgresHost: "provide value for local testing"
 backupPostgresPassword: ""
 backupBudibaseCouchDbAdmin: "provide value for local testing"
 backupBudibaseCouchDbAdminPass: ""
+minioAccessKey: ""
+minioSecretKey: ""
 backupEncryptionKey: "defaultEncryptionKey"
 backupsToKeep: 7
