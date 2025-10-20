@@ -152,6 +152,7 @@ EOF
       rm -f "${FILE_NAME}.gpg"
   else
       echo "ERROR: Failed to upload Budibase backup to S3!"
+      rm -f "${FILE_NAME}.gpg"
       rm -f /tmp/budibase-backup.env
       exit 1
   fi
