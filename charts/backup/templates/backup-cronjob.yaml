@@ -106,6 +106,16 @@ spec:
                     secretKeyRef:
                       key: POSTGRESQL_PASSWORD
                       name: backup-secret-{{ .Release.Name }}-env
+                - name: BUDIBASE_COUCHDB_ADMIN
+                  valueFrom:
+                    secretKeyRef:
+                      key: BUDIBASE_COUCHDB_ADMIN
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: BUDIBASE_COUCHDB_ADMIN_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      key: BUDIBASE_COUCHDB_ADMIN_PASS
+                      name: backup-secret-{{ .Release.Name }}-env
                 - name: BACKUP_ENCRYPTION_KEY
                   valueFrom:
                     secretKeyRef:

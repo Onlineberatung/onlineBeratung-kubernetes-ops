@@ -23,6 +23,9 @@ apk add --no-cache mysql-client
 echo "Installing postgresql client"
 apk add --no-cache postgresql-client
 
+echo "Installing jq for JSON processing"
+apk add --no-cache jq
+
 echo "Installing s3cmd"
 apk add --no-cache py-pip ca-certificates && pip install s3cmd
 cp /s3config/.s3cfg /root
@@ -96,11 +99,72 @@ then
   s3cmd put $FILE_NAME.gpg $BUCKET_NAME
   echo "Finished Postgres backup"
 fi
-echo "Finished backup process"
+
+# BUDIBASE BACKUP USING OFFICIAL CLI
+if [ -n "$BUDIBASE_COUCHDB_ADMIN_PASS" ]
+then
+  echo "Starting Budibase backup"
+
+  # Install Node.js 18+ (required for Budibase CLI)
+  # Alpine 3.16 has Node 16, we need to install a newer version manually
+  apk add --update --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/v3.18/main nodejs npm
+
+  # Verify Node version
+  echo "Node.js version: $(node --version)"
+
+  npm install -g @budibase/cli
+
+  if [ $? -ne 0 ]; then
+      echo "ERROR: Failed to install Budibase CLI"
+      exit 1
+  fi
+
+  COUCHDB_HOST="budibase-svc-couchdb.budibase.svc.cluster.local"
+  MINIO_HOST="minio-service.budibase.svc.cluster.local"
+
+  # Create environment file for Budibase CLI
+  cat > /tmp/budibase-backup.env << EOF
+COUCH_DB_URL=http://${BUDIBASE_COUCHDB_ADMIN}:${BUDIBASE_COUCHDB_ADMIN_PASS}@${COUCHDB_HOST}:5984/
+MINIO_URL=http://${MINIO_HOST}:9000/
+MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+MAIN_PORT=10000
+EOF
+
+  FILE_NAME=$(date +"%FT%H%M%S"_budibase_backup.tar.gz)
+
+  budi backups --export "$FILE_NAME" --env /tmp/budibase-backup.env
+
+  # Verify backup file was created
+  if [ ! -f "$FILE_NAME" ]; then
+      echo "ERROR: Budibase backup file was not created!"
+      rm -f /tmp/budibase-backup.env
+      exit 1
+  fi
+
+  echo "$BACKUP_ENCRYPTION_KEY" | gpg --batch -c --passphrase-fd 0 "$FILE_NAME" && rm -f "$FILE_NAME"
+
+  s3cmd put "${FILE_NAME}.gpg" "$BUCKET_NAME"
+
+  # Verify upload success
+  if [ $? -eq 0 ]; then
+      echo "Budibase backup uploaded successfully to S3"
+      rm -f "${FILE_NAME}.gpg"
+  else
+      echo "ERROR: Failed to upload Budibase backup to S3!"
+      rm -f "${FILE_NAME}.gpg"
+      rm -f /tmp/budibase-backup.env
+      exit 1
+  fi
+
+  rm -f /tmp/budibase-backup.env
+
+  echo "Finished Budibase backup"
+fi
 
 echo "Deleting old backups while keeping most recent $BACKUPS_TO_KEEP"
 s3cmd ls $BUCKET_NAME > /backups.txt
-declare -a BACKUP_NAMES=( "mariadb_backup.tar.gz.gpg" "mongodb_backup.tar.gz.gpg" "ldap_backup.ldif.gpg" "postgres_dump.tar.gz.gpg" )
+declare -a BACKUP_NAMES=( "mariadb_backup.tar.gz.gpg" "mongodb_backup.tar.gz.gpg" "ldap_backup.ldif.gpg" "postgres_dump.tar.gz.gpg" "budibase_backup.tar.gz.gpg" )
 for backup in "${BACKUP_NAMES[@]}"
 do
   COUNT=0
