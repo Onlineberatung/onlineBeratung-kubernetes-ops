@@ -112,7 +112,7 @@ then
   # Verify Node version
   echo "Node.js version: $(node --version)"
 
-  npm install -g @budibase/cli
+  npm install -g @budibase/cli@3.19.2
 
   if [ $? -ne 0 ]; then
       echo "ERROR: Failed to install Budibase CLI"
