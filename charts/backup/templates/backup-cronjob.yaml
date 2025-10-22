@@ -116,6 +116,16 @@ spec:
                     secretKeyRef:
                       key: BUDIBASE_COUCHDB_ADMIN_PASS
                       name: backup-secret-{{ .Release.Name }}-env
+                - name: MINIO_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: MINIO_ACCESS_KEY
+                      name: backup-secret-{{ .Release.Name }}-env
+                - name: MINIO_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: MINIO_SECRET_KEY
+                      name: backup-secret-{{ .Release.Name }}-env
                 - name: BACKUP_ENCRYPTION_KEY
                   valueFrom:
                     secretKeyRef:
