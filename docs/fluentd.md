@@ -1,17 +1,25 @@
 # FluentBit
 
 #### Install fluent-operator
-`helm install fluent-operator --create-namespace -n monitoring https://github.com/fluent/fluent-operator/releases/download/v2.3.0/fluent-operator.tgz --set containerRuntime=containerd -f values-develop.yaml`
+`helm install fluent-operator --create-namespace -n monitoring https://github.com/fluent/fluent-operator/releases/download/v2.7.0/fluent-operator.tgz --set containerRuntime=containerd -f values-develop.yaml`
 
 #### Upgrade fluent-operator
-`helm upgrade fluent-operator -n monitoring https://github.com/fluent/fluent-operator/releases/download/v2.3.0/fluent-operator.tgz --set containerRuntime=containerd -f values-develop.yaml`
+`helm upgrade fluent-operator -n monitoring https://github.com/fluent/fluent-operator/releases/download/v2.7.0/fluent-operator.tgz --set containerRuntime=containerd -f values-develop.yaml`
+
+#### Required steps on upgrade
+If you upgrade fluent-operator with a new version it could require to remove the old configs completely
+1. Go to Lens -> Custom Resources -> fluentbit.fluent.io
+2. Go through all sub categories and remove the entries inside 
+3. Run `helm uninstall fluent-operator -n monitoring`
+4. Open Custom Resources -> Definitions and search for fluent. Remove all entries in group `fluentbit.fluent.io` and `fluentd.fluent.io` 
+5. Run Command from "Install fluent-operator"
 
 #### Basic Configuration
 ```yaml
 fluentbit:
   enabled: true
   image:
-    tag: "v2.1.4"
+    tag: "v2.2.2"
   namespace: "monitoring"
   ingress:
     enable: true
@@ -26,15 +34,19 @@ fluentbit:
       enable: true
     systemd:
       enable: false
+  parser:
+    kubernetesOnlineberatungLoglevel:
+      enable: true
   filter:
     kubernetes:
       enable: false
     kubernetesOnlineberatung:
       enable: true
-      excluded:
-        loglevels:
-          - INFO
-          - DEBUG
+## Excluded disabled on develop/staging
+#      excluded:
+#        loglevels:
+#          - DEBUG
+#          - INFO
       included:
         pods:
           - mongodb

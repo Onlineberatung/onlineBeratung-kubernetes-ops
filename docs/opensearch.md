@@ -13,6 +13,8 @@
 
 `helm upgrade opensearch-operator -n monitoring opensearch-operator/opensearch-operator --version 2.7.0 -f values-develop.yaml`
 
+`helm upgrade opensearch-operator -n monitoring opensearch-operator/opensearch-operator -f values-develop.yaml`
+
 #### Basic Configuration
 ```yaml
 opensearch-cluster:
