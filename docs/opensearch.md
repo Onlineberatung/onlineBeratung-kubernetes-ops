@@ -1,13 +1,17 @@
 # Opensearch
 
 #### Add the repository
-`helm repo add opensearch-operator https://opster.github.io/opensearch-k8s-operator/`
+`helm repo remove opensearch-operator`
+
+`helm repo add opensearch-operator https://opensearch-project.github.io/opensearch-k8s-operator/`
 
 #### Update the repository
 `helm repo update`
 
-#### Install the Opensearch Operator
-`helm install opensearch-operator --create-namespace -n monitoring opensearch-operator/opensearch-operator -f values-develop.yaml`
+#### Install/upgrade the Opensearch Operator
+`helm install opensearch-operator --create-namespace -n monitoring opensearch-operator/opensearch-operator --version 2.7.0 -f values-develop.yaml`
+
+`helm upgrade opensearch-operator -n monitoring opensearch-operator/opensearch-operator --version 2.7.0 -f values-develop.yaml`
 
 #### Basic Configuration
 ```yaml
@@ -15,4 +19,3 @@ opensearch-cluster:
   namespace: "monitoring"
   enabled: true
 ```
-

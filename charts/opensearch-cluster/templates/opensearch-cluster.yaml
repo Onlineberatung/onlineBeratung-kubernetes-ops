@@ -5,14 +5,20 @@ metadata:
   namespace: {{ .Values.namespace | default "default" }}
 spec:
   general:
-    version: 2.5.0
+    version: {{ .Values.version }}
     httpPort: {{ .Values.httpPort }}
     vendor: opensearch
     setVMMaxMapCount: true
     serviceName: {{ .Values.serviceName | default "opensearch" }}
-    pluginsList: ["repository-s3"," https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/releases/download/2.5.0.0/prometheus-exporter-2.5.0.0.zip"]
+    pluginsList:
+      - "repository-s3"
+      - "https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/releases/download/{{ .Values.version }}.0/prometheus-exporter-{{ .Values.version }}.0.zip"
+    additionalConfig:
+      discovery.seed_hosts: opensearch-cluster-masters-0
+      {{/*need to be removed after deployment*/}}
+      cluster.initial_master_nodes: opensearch-cluster-masters-0
   dashboards:
-    version: {{ .Values.dashboard.version }}
+    version: {{ .Values.version }}
     enable: {{ .Values.dashboard.enabled }}
     replicas: {{ .Values.dashboard.replicas }}
     {{ if and .Values.username .Values.password }}
@@ -44,7 +50,7 @@ spec:
     - component: masters
       replicas: {{ .Values.masters.replicas }}
       diskSize: "30Gi"
-      NodeSelector:
+      nodeSelector:
       resources:
         requests:
           memory: "2Gi"
@@ -58,7 +64,7 @@ spec:
     - component: nodes
       replicas: {{ .Values.nodes.replicas }}
       diskSize: "30Gi"
-      NodeSelector:
+      nodeSelector:
       resources:
         requests:
           memory: "2Gi"
@@ -71,7 +77,7 @@ spec:
     - component: coordinators
       replicas: {{ .Values.coordinators.replicas }}
       diskSize: "30Gi"
-      NodeSelector:
+      nodeSelector:
       resources:
         requests:
           memory: "2Gi"
