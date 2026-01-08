@@ -13,10 +13,6 @@ spec:
     pluginsList:
       - "repository-s3"
       - "https://github.com/aiven/prometheus-exporter-plugin-for-opensearch/releases/download/{{ .Values.version }}.0/prometheus-exporter-{{ .Values.version }}.0.zip"
-    additionalConfig:
-      discovery.seed_hosts: opensearch-cluster-masters-0
-      {{/*need to be removed after deployment*/}}
-      cluster.initial_master_nodes: opensearch-cluster-masters-0
   dashboards:
     version: {{ .Values.version }}
     enable: {{ .Values.dashboard.enabled }}
@@ -53,7 +49,7 @@ spec:
       nodeSelector:
       resources:
         requests:
-          memory: "2Gi"
+          memory: "1Gi"
           cpu: "500m"
         limits:
           memory: "2Gi"

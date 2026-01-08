@@ -1,12 +1,12 @@
 httpPort: 9200
-version: 2.7.0
+version: 2.5.0
 dashboard:
   enabled: true
   replicas: 1
 nodes:
   replicas: 0
 masters:
-  replicas: 1
+  replicas: 2
 coordinators:
   replicas: 0
 # To override the password you can use the following attributes:
