@@ -23,11 +23,11 @@ spec:
     {{ end }}
     resources:
       requests:
-        memory: "1Gi"
-        cpu: "500m"
+        memory: {{ .Values.dashboard.resources.requests.memory }}
+        cpu: {{ .Values.dashboard.resources.requests.cpu }}
       limits:
-        memory: "1Gi"
-        cpu: "500m"
+        memory: {{ .Values.dashboard.resources.limits.memory }}
+        cpu: {{ .Values.dashboard.resources.limits.cpu }}
     additionalConfig:
       opensearch_security.multitenancy.enabled: "false"
   confMgmt:
@@ -49,11 +49,11 @@ spec:
       nodeSelector:
       resources:
         requests:
-          memory: "1Gi"
-          cpu: "500m"
+          memory: {{ .Values.masters.resources.requests.memory }}
+          cpu: {{ .Values.masters.resources.requests.cpu }}
         limits:
-          memory: "2Gi"
-          cpu: "500m"
+          memory: {{ .Values.masters.resources.limits.memory }}
+          cpu: {{ .Values.masters.resources.limits.cpu }}
       roles:
         - "cluster_manager"
         - "data"
