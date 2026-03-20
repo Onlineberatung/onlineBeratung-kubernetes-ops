@@ -9,9 +9,9 @@
 `helm repo update`
 
 #### Install/upgrade the Opensearch Operator
-`helm install opensearch-operator --create-namespace -n monitoring opensearch-operator/opensearch-operator --version 2.5.0 -f values-develop.yaml`
+`helm install opensearch-operator --create-namespace -n monitoring opensearch-operator/opensearch-operator --version 2.7.0 --set kubeRbacProxy.image.repository=docker.io/kubebuilder/kube-rbac-proxy --set kubeRbacProxy.image.tag=v0.15.0 -f values-develop.yaml`
 
-`helm upgrade opensearch-operator -n monitoring opensearch-operator/opensearch-operator --version 2.5.0 -f values-develop.yaml`
+`helm upgrade opensearch-operator -n monitoring opensearch-operator/opensearch-operator --version 2.7.0 --set kubeRbacProxy.image.repository=docker.io/kubebuilder/kube-rbac-proxy --set kubeRbacProxy.image.tag=v0.15.0 -f values-develop.yaml`
 
 #### Basic Configuration
 ```yaml
