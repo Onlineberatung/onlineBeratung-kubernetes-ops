@@ -16,7 +16,7 @@ spec:
         spec:
           containers:
             - name: backup-backup
-              image: "alpine:3.16.2"
+              image: "alpine:3.22"
               imagePullPolicy: IfNotPresent
               volumeMounts:
                 - name: backup-config-volume
