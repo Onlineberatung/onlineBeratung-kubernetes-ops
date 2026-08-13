@@ -24,7 +24,7 @@ echo "Installing postgresql client"
 apk add --no-cache postgresql-client
 
 echo "Installing s3cmd"
-apk add --no-cache py-pip ca-certificates && pip install s3cmd
+apk add --no-cache s3cmd ca-certificates
 cp /s3config/.s3cfg /root
 
 echo "Setting configuration parameters for s3cmd"
